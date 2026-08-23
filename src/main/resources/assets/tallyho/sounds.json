@@ -1,0 +1,50 @@
+{
+  "heli_loop" : {
+    "subtitle": "subtitle.tallyho.heli",
+    "sounds" : [
+      {
+        "name": "tallyho:heli_loop",
+        "stream": true
+      }
+    ]
+  },
+  "bullet_whizz": {
+    "subtitle": "subtitle.tallyho.bullet.whizz",
+    "sounds" : [
+      {
+        "name": "tallyho:bullet_whizz"
+      }
+    ]
+  },
+  "bullet_impact": {
+    "subtitle": "subtitle.tallyho.bullet.impact",
+    "sounds" : [
+      {"name": "tallyho:impact1", "weight": 7},
+      {"name": "tallyho:impact2"}
+    ]
+  },
+  "missile_launch": {
+    "subtitle": "subtitle.tallyho.missile.launch",
+    "sounds" : [
+      {
+        "name": "tallyho:missile_launch"
+      }
+    ]
+  },
+  "aim9_seek": {
+    "subtitle": "subtitle.tallyho.missile.seek",
+    "sounds" : [
+      {
+        "name": "tallyho:aim9_seek"
+      }
+    ]
+  },
+  "aim9_lock": {
+    "subtitle": "subtitle.tallyho.missile.lock",
+    "sounds" : [
+      {
+        "name": "tallyho:aim9_lock"
+      }
+    ]
+  }
+}

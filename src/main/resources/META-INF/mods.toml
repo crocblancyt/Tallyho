@@ -1,0 +1,44 @@
+modLoader="javafml"
+loaderVersion="[40,)"
+license="All rights reserved"
+
+[[mods]]
+modId="tallyho"
+version="${mod_version}"
+displayName="Tallyho"
+logoFile="tallyho.png"
+credits="Thanks for this example mod goes to Java"
+authors="A certain enderman"
+description='''
+This is a long form description of the mod. You can write whatever you want here
+
+Allows clockwork bearings to be powered by SU
+'''
+
+[[dependencies.tallyho]]
+    modId="forge"
+    mandatory=true
+    versionRange="[40,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.tallyho]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.20.1,1.20.5)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.tallyho]]
+    modId="valkyrienskies"
+    mandatory=true
+    versionRange="[2,)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies.tallyho]]
+    modId="create"
+    mandatory=true
+    versionRange="[0.5.1.i,)"
+    ordering="NONE"
+    side="BOTH"

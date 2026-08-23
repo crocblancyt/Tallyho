@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "lit=false": {
+      "model": "minecraft:block/note_block"
+    },
+    "lit=true": {
+      "model": "minecraft:block/note_block"
+    }
+  }
+}

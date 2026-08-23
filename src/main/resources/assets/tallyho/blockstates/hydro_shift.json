@@ -1,0 +1,17 @@
+{
+  "variants": {
+    "axis=x": {
+      "model": "tallyho:block/hydro_shift/block",
+      "x": 90,
+      "y": 90
+    },
+    "axis=y": {
+      "model": "tallyho:block/hydro_shift/block"
+    },
+    "axis=z": {
+      "model": "tallyho:block/hydro_shift/block",
+      "x": 90,
+      "y": 180
+    }
+  }
+}

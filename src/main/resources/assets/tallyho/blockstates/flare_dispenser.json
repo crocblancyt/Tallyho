@@ -1,0 +1,50 @@
+{
+  "variants": {
+    "lit=false,facing=north": {
+      "model": "tallyho:block/flare_dispenser"
+    },
+    "lit=false,facing=south": {
+      "model": "tallyho:block/flare_dispenser",
+      "y": 180
+    },
+    "lit=false,facing=west": {
+      "model": "tallyho:block/flare_dispenser",
+      "y": 270
+    },
+    "lit=false,facing=east": {
+      "model": "tallyho:block/flare_dispenser",
+      "y": 90
+    },
+    "lit=false,facing=up": {
+      "model": "tallyho:block/flare_dispenser",
+      "x": 270
+    },
+    "lit=false,facing=down": {
+      "model": "tallyho:block/flare_dispenser",
+      "x": 90
+    },
+    "lit=true,facing=north": {
+      "model": "tallyho:block/flare_dispenser"
+    },
+    "lit=true,facing=south": {
+      "model": "tallyho:block/flare_dispenser",
+      "y": 180
+    },
+    "lit=true,facing=west": {
+      "model": "tallyho:block/flare_dispenser",
+      "y": 270
+    },
+    "lit=true,facing=east": {
+      "model": "tallyho:block/flare_dispenser",
+      "y": 90
+    },
+    "lit=true,facing=up": {
+      "model": "tallyho:block/flare_dispenser",
+      "x": 270
+    },
+    "lit=true,facing=down": {
+      "model": "tallyho:block/flare_dispenser",
+      "x": 90
+    }
+  }
+}

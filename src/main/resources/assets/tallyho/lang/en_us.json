@@ -1,0 +1,26 @@
+{
+  "itemGroup.tallyho.base": "Tallyho",
+
+  "item.tallyho.mpcd_programmer": "Weapon Manager Programmer",
+
+  "block.tallyho.hydro_shift": "Stratodonut(R) Hydraulic Transmission",
+  "item.tallyho.bearing_jack": "DROP-IN DESTROYER 9000",
+
+  "key.tallyho.seat_up" : "Adjust Seat Up",
+  "key.tallyho.seat_down" : "Adjust Seat Down",
+
+  "key.tallyho.designate" : "Activate Laser Designator",
+  "key.tallyho.special_one" : "Special Function 1",
+  "key.tallyho.special_two" : "Special Function 2",
+  "key.tallyho.special_three" : "Special Function 3",
+  "key.tallyho.special_four" : "Special Function 4",
+  "key.tallyho.ptt_key": "Activate PTT in Hotbar",
+  "key.tallyho.sms_focus": "Toggle Weapon Manager Focus",
+  "key.tallyho.sms_launch": "Weapon Manager Launch",
+
+  "key.categories.tallyho" : "Tallyho",
+
+  "info.tallyho.shaped_charge" : "Penetration: R%s",
+  "info.tallyho.lethal_radius": "Lethal Radius: %sm",
+  "info.tallyho.tnt" : "Yield: %sx TNT"
+}
