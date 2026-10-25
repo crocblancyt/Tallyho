@@ -7,12 +7,17 @@ import com.mojang.authlib.yggdrasil.YggdrasilMinecraftSessionService;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
-@Mixin({YggdrasilMinecraftSessionService.class})
+@Mixin(YggdrasilMinecraftSessionService.class)
 public abstract class MixinMinecraftSession {
-    @WrapOperation(method = {"getTextures"}, at = {@At(value = "INVOKE", target = "Lcom/mojang/authlib/yggdrasil/YggdrasilMinecraftSessionService;getSecurePropertyValue(Lcom/mojang/authlib/properties/Property;)Ljava/lang/String;")}, remap = false)
-    public String bypassSignatureCheck(YggdrasilMinecraftSessionService instance, Property property, Operation<String> original) {
-        if (!property.hasSignature())
-            return property.getValue();
-        return original.call(instance, property);
-    }
+   @WrapOperation(
+      method = "getTextures",
+      at = @At(
+         value = "INVOKE",
+         target = "Lcom/mojang/authlib/yggdrasil/YggdrasilMinecraftSessionService;getSecurePropertyValue(Lcom/mojang/authlib/properties/Property;)Ljava/lang/String;"
+      ),
+      remap = false
+   )
+   public String bypassSignatureCheck(YggdrasilMinecraftSessionService instance, Property property, Operation<String> original) {
+      return !property.hasSignature() ? property.getValue() : (String)original.call(new Object[]{instance, property});
+   }
 }

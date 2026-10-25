@@ -15,18 +15,21 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin({AnalogLeverBlock.class})
+@Mixin(AnalogLeverBlock.class)
 public abstract class MixinAnalogLever {
-    @Inject(method = {"use"}, at = {@At("HEAD")}, cancellable = true)
-    public void stopUse(BlockState state, Level worldIn, BlockPos pos, Player player, InteractionHand handIn, BlockHitResult hit, CallbackInfoReturnable<InteractionResult> cir) {
-        if (player.isSpectator()) {
-            String output = "User: " + player.getDisplayName().getString() + " attempted to flick a lever in spectator.";
-            TallyhoMod.warn(output);
-            worldIn.players().forEach(p -> {
-                if (p.isShiftKeyDown())
-                    p.displayClientMessage(Component.literal(output), false);
-            });
-            cir.setReturnValue(InteractionResult.FAIL);
-        }
-    }
+   @Inject(method = "use", at = @At("HEAD"), cancellable = true)
+   public void stopUse(
+      BlockState state, Level worldIn, BlockPos pos, Player player, InteractionHand handIn, BlockHitResult hit, CallbackInfoReturnable<InteractionResult> cir
+   ) {
+      if (player.isSpectator()) {
+         String output = "User: " + player.getName().getString() + " attempted to flick a lever in spectator.";
+         TallyhoMod.warn(output);
+         worldIn.players().forEach(p -> {
+            if (p.hasPermissions(2)) {
+               p.sendSystemMessage(Component.literal(output));
+            }
+         });
+         cir.setReturnValue(InteractionResult.FAIL);
+      }
+   }
 }

@@ -14,23 +14,36 @@ import rbasamoyai.createbigcannons.config.CBCConfigs;
 import riftyboi.cbcmodernwarfare.cannon_control.contraption.MountedMediumcannonContraption;
 import riftyboi.cbcmodernwarfare.cannons.medium_cannon.breech.MediumcannonBreechBlockEntity;
 
-@Mixin(value = {MountedMediumcannonContraption.class}, remap = false)
+@Mixin(value = MountedMediumcannonContraption.class, remap = false)
 public abstract class MixinMediumCannonContraption extends AbstractMountedCannonContraption {
-    @WrapOperation(method = {"fireShot"}, at = {@At(value = "INVOKE", target = "Lrbasamoyai/createbigcannons/cannon_control/ControlPitchContraption;onRecoil(Lnet/minecraft/world/phys/Vec3;Lcom/simibubi/create/content/contraptions/AbstractContraptionEntity;)V")})
-    private void mixinRecoil(ControlPitchContraption instance, Vec3 vector, AbstractContraptionEntity cannon, Operation<Void> original) {
-        original.call(instance, vector.scale(0.2199999988079071D), cannon);
-        AbstractContraptionEntity abstractContraptionEntity = this.entity;
-        if (abstractContraptionEntity instanceof RecoilingCannonEntity) {
-            RecoilingCannonEntity mpoe = (RecoilingCannonEntity)abstractContraptionEntity;
-            mpoe.recoil(vector.normalize());
-        }
-        MountedMediumcannonContraption mmc = (MountedMediumcannonContraption)(Object)this;
-        mmc.hasFired = true;
-    }
+   @WrapOperation(
+      method = "fireShot",
+      at = @At(
+         value = "INVOKE",
+         target = "Lrbasamoyai/createbigcannons/cannon_control/ControlPitchContraption;onRecoil(Lnet/minecraft/world/phys/Vec3;Lcom/simibubi/create/content/contraptions/AbstractContraptionEntity;)V"
+      )
+   )
+   private void mixinRecoil(ControlPitchContraption instance, Vec3 vector, AbstractContraptionEntity cannon, Operation<Void> original) {
+      //original.call(new Object[]{instance, vector.scale(0.22F), cannon});
+      original.call(instance, vector.scale(0.22F), cannon);
+      if (this.entity instanceof RecoilingCannonEntity mpoe) {
+         mpoe.recoil(vector.normalize());
+      }
 
-    @WrapOperation(method = {"fireShot"}, at = {@At(value = "INVOKE", target = "Lriftyboi/cbcmodernwarfare/cannons/medium_cannon/breech/MediumcannonBreechBlockEntity;setInputBuffer(Lnet/minecraft/world/item/ItemStack;)V")})
-    private void mixinAfterFire(MediumcannonBreechBlockEntity breech, ItemStack stack, Operation<Void> original) {
-        original.call(breech, stack);
-        breech.setLoadingCooldown((int)(CBCConfigs.SERVER.cannons.quickfiringBreechLoadingCooldown.get() * 1.8D));
-    }
+      MountedMediumcannonContraption mmc = (MountedMediumcannonContraption) (Object) this;
+      mmc.hasFired = true;
+   }
+
+   @WrapOperation(
+      method = "fireShot",
+      at = @At(
+         value = "INVOKE",
+         target = "Lriftyboi/cbcmodernwarfare/cannons/medium_cannon/breech/MediumcannonBreechBlockEntity;setInputBuffer(Lnet/minecraft/world/item/ItemStack;)V"
+      )
+   )
+   private void mixinAfterFire(MediumcannonBreechBlockEntity breech, ItemStack stack, Operation<Void> original) {
+      //original.call(new Object[]{breech, stack});
+      original.call(breech, stack);
+      breech.setLoadingCooldown((int)(((Integer)CBCConfigs.SERVER.cannons.quickfiringBreechLoadingCooldown.get()).intValue() * 1.8));
+   }
 }

@@ -5,11 +5,11 @@ import net.minecraft.world.level.Level;
 import rbasamoyai.createbigcannons.munitions.big_cannon.fluid_shell.FluidBlobBurst;
 
 public class FireBlobBurst extends FluidBlobBurst {
-    public FireBlobBurst(EntityType<? extends FireBlobBurst> entityType, Level level) {
-        super(entityType, level);
-    }
+   public FireBlobBurst(EntityType<? extends FluidBlobBurst> entityType, Level level) {
+      super(entityType, level);
+   }
 
-    protected void setBlobSize(byte size) {
-        super.setBlobSize(size);
-    }
+   protected void setBlobSize(byte size) {
+      super.setBlobSize(size);
+   }
 }

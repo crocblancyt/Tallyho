@@ -1,7 +1,6 @@
 package edn.stratodonut.tallyho;
 
 import com.copycatsplus.copycats.CCBlocks;
-import com.simibubi.create.AllBlocks;
 import java.util.List;
 import kotlin.NotImplementedError;
 import kotlin.Triple;
@@ -19,38 +18,38 @@ import org.valkyrienskies.physics_api.voxel.Lod1LiquidBlockState;
 import org.valkyrienskies.physics_api.voxel.Lod1SolidBlockState;
 
 public class NonSolidBlockstateProvider implements BlockStateInfoProvider {
-    public int getPriority() {
-        return 128;
-    }
+   public int getPriority() {
+      return 128;
+   }
 
-    @Nullable
-    public BlockType getBlockStateType(@NotNull BlockState blockState) {
-        if (AllBlocks.REDSTONE_LINK.has(blockState) || blockState.is(BlockTags.CLIMBABLE) || CCBlocks.COPYCAT_BOARD.has(blockState))
-            return BlockTypeImpl.a.a();
-        return null;
-    }
+   @Nullable
+   public BlockType getBlockStateType(@NotNull BlockState blockState) {
+      return !com.simibubi.create.AllBlocks.REDSTONE_LINK.has(blockState) && !blockState.is(BlockTags.LEAVES) && !CCBlocks.COPYCAT_BOARD.has(blockState)
+         ? null
+         : BlockTypeImpl.a.a();
+   }
 
-    public static void init() {
-        Registry.register((Registry)BlockStateInfo.INSTANCE.getREGISTRY(), new ResourceLocation("tallyho", "data"), new NonSolidBlockstateProvider());
-    }
+   public static void init() {
+      Registry.register(BlockStateInfo.INSTANCE.getREGISTRY(), new ResourceLocation("tallyho", "data"), new NonSolidBlockstateProvider());
+   }
 
-    @Nullable
-    public Double getBlockStateMass(@NotNull BlockState blockState) {
-        return null;
-    }
+   @Nullable
+   public Double getBlockStateMass(@NotNull BlockState blockState) {
+      return null;
+   }
 
-    @NotNull
-    public List<Triple<Integer, Integer, Integer>> getBlockStateData() {
-        throw new NotImplementedError();
-    }
+   @NotNull
+   public List<Triple<Integer, Integer, Integer>> getBlockStateData() {
+      throw new NotImplementedError();
+   }
 
-    @NotNull
-    public List<Lod1LiquidBlockState> getLiquidBlockStates() {
-        throw new NotImplementedError();
-    }
+   @NotNull
+   public List<Lod1LiquidBlockState> getLiquidBlockStates() {
+      throw new NotImplementedError();
+   }
 
-    @NotNull
-    public List<Lod1SolidBlockState> getSolidBlockStates() {
-        throw new NotImplementedError();
-    }
+   @NotNull
+   public List<Lod1SolidBlockState> getSolidBlockStates() {
+      throw new NotImplementedError();
+   }
 }

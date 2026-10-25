@@ -10,15 +10,18 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 public class ImpactFuze implements FuzeComponent {
-    public static class Factory implements IFuzeFactory<ImpactFuze> {
-        public ImpactFuze create() {
-          return new ImpactFuze();
-        }
-
-        public void appendHoverText(List<Component> components) {}
-    }
-
-    public Optional<Vec3> tick(MountedMissileEntity missile, Level level, Vec3 pos, Vec3 del) {
+   @Override
+   public Optional<Vec3> tick(MountedMissileEntity missile, Level level, Vec3 pos, Vec3 del) {
       return Optional.empty();
-    }
+   }
+
+   public static class Factory implements IFuzeFactory<ImpactFuze> {
+      public ImpactFuze create() {
+         return new ImpactFuze();
+      }
+
+      @Override
+      public void appendHoverText(List<Component> components) {
+      }
+   }
 }

@@ -3,10 +3,10 @@ package edn.stratodonut.tallyho.camera.entity;
 import javax.annotation.Nonnull;
 
 public interface ILaserDesignator {
-    void designate();
+   void designate();
 
-    boolean isDesignatorActive();
+   boolean isDesignatorActive();
 
-    @Nonnull
-    String getCode();
+   @Nonnull
+   String getCode();
 }

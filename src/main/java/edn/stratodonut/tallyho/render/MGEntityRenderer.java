@@ -3,11 +3,12 @@ package edn.stratodonut.tallyho.render;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import edn.stratodonut.tallyho.AllItems;
+import edn.stratodonut.tallyho.camera.entity.CoaxMachineGunEntity;
 import edn.stratodonut.tallyho.client.RenderUtil;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderer;
-import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.entity.EntityRendererProvider.Context;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
@@ -15,30 +16,35 @@ import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 
 public class MGEntityRenderer<T extends Entity> extends EntityRenderer<T> {
-    public MGEntityRenderer(EntityRendererProvider.Context context) {
-        super(context);
-    }
+   public MGEntityRenderer(Context context) {
+      super(context);
+   }
 
-    public ResourceLocation getTextureLocation(Entity entity) {
-        return null;
-    }
+   public ResourceLocation getTextureLocation(Entity entity) {
+      return null;
+   }
 
-    public void render(Entity entity, float entityYaw, float partialTicks, PoseStack poseStack, MultiBufferSource renderTypeBuffer, int light) {
-        if (entity.tickCount > 1) {
-            ItemStack s = (entity instanceof edn.stratodonut.tallyho.camera.entity.CoaxMachineGunEntity) ? AllItems.COAX_MG_ITEM.asStack() : AllItems.HULL_MG_ITEM.asStack();
-            poseStack.pushPose();
-            if (!RenderUtil.getModel(s).usesBlockLight()) {
-                poseStack.mulPose(this.entityRenderDispatcher.cameraOrientation());
-                poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
-                Minecraft.getInstance().getItemRenderer().renderStatic(s, ItemDisplayContext.GROUND, light, OverlayTexture.NO_OVERLAY, poseStack, renderTypeBuffer, entity.level(), 0);
-            } else {
-                poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
-                poseStack.mulPose(Axis.YP.rotationDegrees(-entity.getYRot()));
-                poseStack.mulPose(Axis.XP.rotationDegrees(-entity.getXRot()));
-                poseStack.translate(0.0F, 1.0F, 0.0F);
-                Minecraft.getInstance().getItemRenderer().renderStatic(s, ItemDisplayContext.NONE, light, OverlayTexture.NO_OVERLAY, poseStack, renderTypeBuffer, entity.level(), 0);
-            }
-            poseStack.popPose();
-        }
-    }
+   public void render(Entity entity, float entityYaw, float partialTicks, PoseStack poseStack, MultiBufferSource renderTypeBuffer, int light) {
+      if (entity.tickCount > 1) {
+         ItemStack s = entity instanceof CoaxMachineGunEntity ? AllItems.COAX_MG_ITEM.asStack() : AllItems.HULL_MG_ITEM.asStack();
+         poseStack.pushPose();
+         if (!RenderUtil.getModel(s).isGui3d()) {
+            poseStack.mulPose(this.entityRenderDispatcher.cameraOrientation());
+            poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
+            Minecraft.getInstance()
+               .getItemRenderer()
+               .renderStatic(s, ItemDisplayContext.GROUND, light, OverlayTexture.NO_OVERLAY, poseStack, renderTypeBuffer, entity.level(), 0);
+         } else {
+            poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
+            poseStack.mulPose(Axis.YP.rotationDegrees(-entity.getYRot()));
+            poseStack.mulPose(Axis.XP.rotationDegrees(-entity.getXRot()));
+            poseStack.translate(0.0F, 1.0F, 0.0F);
+            Minecraft.getInstance()
+               .getItemRenderer()
+               .renderStatic(s, ItemDisplayContext.NONE, light, OverlayTexture.NO_OVERLAY, poseStack, renderTypeBuffer, entity.level(), 0);
+         }
+
+         poseStack.popPose();
+      }
+   }
 }

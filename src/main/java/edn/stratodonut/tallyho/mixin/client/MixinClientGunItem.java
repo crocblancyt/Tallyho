@@ -12,31 +12,24 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import team.creative.playerrevive.server.PlayerReviveServer;
 
-@Mixin(value = {GunItem.class}, remap = false)
+@Mixin(value = GunItem.class, remap = false)
 public abstract class MixinClientGunItem {
-    @Inject(method = {"tryFire"}, at = {@At("HEAD")}, cancellable = true)
-    private void mixinTryFire(LocalPlayer player, ItemStack itemStack, Entity targetEntity, CallbackInfoReturnable<Boolean> cir) {
-        if (isDown(player) || player.isCrouching())
-            cir.setReturnValue(false);
-    }
+   @Inject(method = "tryFire", at = @At("HEAD"), cancellable = true)
+   private void mixinTryFire(LocalPlayer player, ItemStack itemStack, Entity targetEntity, CallbackInfoReturnable<Boolean> cir) {
+      if (this.isDown(player) || player.handsBusy) {
+         cir.setReturnValue(false);
+      }
+   }
 
-    @Inject(method = {"tryReload"}, at = {@At("HEAD")}, cancellable = true)
-    private void mixinTryReload(Player player, ItemStack itemStack, CallbackInfoReturnable<Boolean> cir) {
-        if (!isDown(player)) {
-            if (player instanceof LocalPlayer) {
-                LocalPlayer lp = (LocalPlayer)player;
-                if (lp.isCrouching()) {
-                    cir.setReturnValue(false);
-                    return;
-                }
-            }
-            return;
-        }
-        cir.setReturnValue(false);
-    }
+   @Inject(method = "tryReload", at = @At("HEAD"), cancellable = true)
+   private void mixinTryReload(Player player, ItemStack itemStack, CallbackInfoReturnable<Boolean> cir) {
+      if (this.isDown(player) || player instanceof LocalPlayer lp && lp.handsBusy) {
+         cir.setReturnValue(false);
+      }
+   }
 
-    @Unique
-    private boolean isDown(Player player) {
-        return PlayerReviveServer.isBleeding(player);
-    }
+   @Unique
+   private boolean isDown(Player player) {
+      return PlayerReviveServer.isBleeding(player);
+   }
 }

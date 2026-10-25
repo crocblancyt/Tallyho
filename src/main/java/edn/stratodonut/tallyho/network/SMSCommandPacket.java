@@ -3,65 +3,63 @@ package edn.stratodonut.tallyho.network;
 import com.simibubi.create.foundation.networking.SimplePacketBase;
 import edn.stratodonut.tallyho.entity.MountedMissileEntity;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.world.entity.Entity;
-import net.minecraftforge.network.NetworkEvent;
+import net.minecraftforge.network.NetworkEvent.Context;
 
 public class SMSCommandPacket extends SimplePacketBase {
-    public int entityID;
-    private CommandType type;
+   public int entityID;
+   private SMSCommandPacket.CommandType type;
 
-    public enum CommandType {
-        LAUNCH(1),
-        SEEKER(2);
+   public SMSCommandPacket() {
+   }
 
-        public final int val;
+   public static SMSCommandPacket Launch(int entityID) {
+      return new SMSCommandPacket(entityID, SMSCommandPacket.CommandType.LAUNCH);
+   }
 
-        CommandType(int v) {
-            this.val = v;
-        }
-    }
+   public static SMSCommandPacket ActivateSeeker(int entityID) {
+      return new SMSCommandPacket(entityID, SMSCommandPacket.CommandType.SEEKER);
+   }
 
-    public SMSCommandPacket() {}
+   private SMSCommandPacket(int entityID, SMSCommandPacket.CommandType type) {
+      this.entityID = entityID;
+      this.type = type;
+   }
 
-    public static SMSCommandPacket Launch(int entityID) {
-        return new SMSCommandPacket(entityID, CommandType.LAUNCH);
-    }
+   public SMSCommandPacket(FriendlyByteBuf buf) {
+      this.entityID = buf.readInt();
+      this.type = (SMSCommandPacket.CommandType)buf.readEnum(SMSCommandPacket.CommandType.class);
+   }
 
-    public static SMSCommandPacket ActivateSeeker(int entityID) {
-        return new SMSCommandPacket(entityID, CommandType.SEEKER);
-    }
+   public void write(FriendlyByteBuf buffer) {
+      buffer.writeInt(this.entityID);
+      buffer.writeEnum(this.type);
+   }
 
-    private SMSCommandPacket(int entityID, CommandType type) {
-        this.entityID = entityID;
-        this.type = type;
-    }
-
-    public SMSCommandPacket(FriendlyByteBuf buf) {
-        this.entityID = buf.readInt();
-        this.type = buf.readEnum(CommandType.class);
-    }
-
-    public void write(FriendlyByteBuf buffer) {
-        buffer.writeInt(this.entityID);
-        buffer.writeEnum(this.type);
-    }
-
-    public boolean handle(NetworkEvent.Context context) {
-        context.enqueueWork(() -> {
-            Entity e = context.getSender().level().getEntity(this.entityID);
-            if (e instanceof MountedMissileEntity) {
-                MountedMissileEntity missile = (MountedMissileEntity)e;
-                switch (this.type) {
-                    case LAUNCH:
-                        missile.launch();
-                        break;
-                    case SEEKER:
-                        if (missile.getGuidance() != null)
-                            missile.getGuidance().activateSeeker();
-                        break;
-                }
+   public boolean handle(Context context) {
+      context.enqueueWork(() -> {
+         if (context.getSender().level().getEntity(this.entityID) instanceof MountedMissileEntity missile) {
+            switch (this.type) {
+               case LAUNCH:
+                  missile.launch();
+                  break;
+               case SEEKER:
+                  if (missile.getGuidance() != null) {
+                     missile.getGuidance().activateSeeker();
+                  }
             }
-        });
-        return true;
-    }
+         }
+      });
+      return true;
+   }
+
+   public enum CommandType {
+      LAUNCH(1),
+      SEEKER(2);
+
+      public final int val;
+
+      CommandType(int v) {
+         this.val = v;
+      }
+   }
 }

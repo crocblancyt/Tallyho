@@ -1,5 +1,6 @@
 package edn.stratodonut.tallyho.camera.entity;
 
+import com.simibubi.create.content.equipment.wrench.WrenchItem;
 import edn.stratodonut.tallyho.AllEntities;
 import edn.stratodonut.tallyho.IClientKeyConsumer;
 import edn.stratodonut.tallyho.KeyBinds;
@@ -12,7 +13,6 @@ import edn.stratodonut.tallyho.network.RangePacket;
 import java.util.Optional;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -45,246 +45,216 @@ import rbasamoyai.createbigcannons.munitions.autocannon.AutocannonRoundItem;
 import rbasamoyai.createbigcannons.utils.CBCUtils;
 
 public class HeliChinTurretEntity extends PointStabilisedCameraEntity implements ITurret, IClientKeyConsumer, ILaserDesignator {
+   private static final EntityDataAccessor<Integer> DATA_ID_RANGE_SETTING = SynchedEntityData.defineId(HeliChinTurretEntity.class, EntityDataSerializers.INT);
+   protected final AutocannonRoundItem AMMO = (AutocannonRoundItem)CBCItems.FLAK_AUTOCANNON_ROUND.get();
+   protected static ItemStack FUZE;
+   protected final AutocannonMaterialProperties MACHINE_GUN_PROPERTIES = ((AutocannonBreechBlock)CBCBlocks.STEEL_AUTOCANNON_BREECH.get())
+      .getAutocannonMaterial()
+      .properties();
+   protected static final int BARREL_LENGTH = 7;
+   private static final int BELT_LENGTH = 300;
+   private static final int RELOAD_TIME_TICKS = 160;
+   private static final int FIRING_COOLDOWN_TICKS = 2;
+   private float designatorTicks = 0.0F;
+   MultiOpticType opticMode;
+   int belt = 0;
+   int reloadProgress = 0;
+   int firingCooldown = 0;
+   int timeout = 0;
 
-    private static final EntityDataAccessor<Integer> DATA_ID_RANGE_SETTING =
-            SynchedEntityData.defineId(HeliChinTurretEntity.class, EntityDataSerializers.INT);
+   public HeliChinTurretEntity(EntityType<? extends Entity> p_20966_, Level p_20967_) {
+      super(p_20966_, p_20967_);
+      if (FUZE == null) {
+         FUZE = new ItemStack((ItemLike)CBCItems.PROXIMITY_FUZE.get(), 1);
+         FUZE.getOrCreateTag().putInt("DetonationDistance", 1);
+      }
 
-    protected final AutocannonRoundItem AMMO =
-                CBCItems.FLAK_AUTOCANNON_ROUND.get();
+      this.opticMode = new MultiOpticType(CameraEntity2.PostFXType.VISIBLE, CameraEntity2.PostFXType.THERMALS_WHITE);
+   }
 
-    protected static ItemStack FUZE;
+   public HeliChinTurretEntity(Level p_19871_) {
+      this((EntityType<? extends Entity>)AllEntities.HELI_CHIN_GUN_ENTITY.get(), p_19871_);
+   }
 
-    protected final AutocannonMaterialProperties MACHINE_GUN_PROPERTIES =
-            (CBCBlocks.STEEL_AUTOCANNON_BREECH.get()).getAutocannonMaterial().properties();
+   public static HeliChinTurretEntity spawn(ServerLevel level, Vec3 pos, float base_yaw) {
+      HeliChinTurretEntity result = new HeliChinTurretEntity(level);
+      result.setParams(base_yaw, CameraEntity2.PostFXType.VISIBLE, new AngleLimits(72.0F, 20.0F, 120.0F), -1);
+      result.setPos(pos);
+      level.addFreshEntity(result);
+      FlexibleSeatEntity.sitDown(level, pos, result);
+      result.setYRot(base_yaw);
+      result.belt = 300;
+      return result;
+   }
 
-    protected static final int BARREL_LENGTH = 7;
-    private static final int BELT_LENGTH = 300;
-    private static final int RELOAD_TIME_TICKS = 160;
-    private static final int FIRING_COOLDOWN_TICKS = 2;
+   @Override
+   public void tick() {
+      super.tick();
+      if (this.isDesignatorActive()) {
+         this.designatorTicks--;
+      }
 
-    private float designatorTicks = 0.0F;
-    MultiOpticType opticMode;
-    int belt;
-    int reloadProgress;
-    int firingCooldown;
-    int timeout;
-
-    public HeliChinTurretEntity(EntityType<? extends Entity> entityType, Level level) {
-        super(entityType, level);
-        this.belt = 0;
-        this.reloadProgress = 0;
-        this.firingCooldown = 0;
-        this.timeout = 0;
-
-        if (FUZE == null) {
-            FUZE = new ItemStack(CBCItems.PROXIMITY_FUZE.get(), 1);
-            FUZE.getOrCreateTag().putInt("DetonationDistance", 1);
-        }
-
-        this.opticMode = new MultiOpticType(new CameraEntity2.PostFXType[] {
-                CameraEntity2.PostFXType.VISIBLE,
-                CameraEntity2.PostFXType.THERMALS_WHITE
-        });
-    }
-
-    public HeliChinTurretEntity(Level level) {
-        this(AllEntities.HELI_CHIN_GUN_ENTITY.get(), level);
-    }
-
-    public static HeliChinTurretEntity spawn(ServerLevel level, Vec3 pos, float baseYaw) {
-        HeliChinTurretEntity result = new HeliChinTurretEntity(level);
-        result.setParams(baseYaw, CameraEntity2.PostFXType.VISIBLE,
-                new AngleLimits(72.0F, 20.0F, 120.0F), -1);
-        result.setPos(pos);
-        level.addFreshEntity(result);
-        FlexibleSeatEntity.sitDown(level, pos, result);
-        result.setYRot(baseYaw);
-        result.belt = 300;
-        return result;
-    }
-
-    @Override
-    public void tick() {
-        super.tick();
-
-        if (isDesignatorActive()) {
-            this.designatorTicks--;
-        }
-
-        if (this.level().isClientSide()) {
-            return;
-        }
-
-        if (isDesignatorActive()) {
-            String code = getCode();
-            Optional<LaserPointEntity> target = LaserPointEntity.find(this.level(),
-                    this.getBoundingBox().inflate(400.0D), code);
-            target.ifPresent(laserPoint -> {
-              setRange((int) this.getEyePosition().distanceTo(laserPoint.position()));
-              setStabVector(laserPoint.position());
+      if (!this.level().isClientSide) {
+         if (this.isDesignatorActive()) {
+            String code = this.getCode();
+            Optional<LaserPointEntity> targ = LaserPointEntity.find(this.level(), this.getBoundingBox().inflate(400.0), code);
+            targ.ifPresent(lpe -> {
+               this.setRange((int)this.getEyePosition().subtract(lpe.position()).length());
+               this.setStabVector(lpe.position());
             });
-        }
+         }
 
-        if (this.belt == 0) {
+         if (this.belt == 0) {
             this.reloadProgress++;
             if (this.reloadProgress > 160) {
-                this.belt = 300;
-                this.reloadProgress = 0;
+               this.belt = 300;
+               this.reloadProgress = 0;
             }
-        }
+         }
 
-        if (this.firingCooldown > 0) {
+         if (this.firingCooldown > 0) {
             this.firingCooldown--;
-        }
-    }
+         }
+      }
+   }
 
-    @Override
-    public final void handleShoot(LivingEntity shooter) {
-        if (this.level().isClientSide()) {
-            return;
-        }
-
-        ServerLevel serverLevel = (ServerLevel) this.level();
-        Ship ship = VSGameUtilsKt.getShipManaging((this.getVehicle() != null) ? this.getVehicle() : this);
-        BlockPos virtualPos = this.blockPosition();
-        Vec3 lookVector = this.getViewVector(1.0F);
-        Vec3 spawnPos = this.position().add(lookVector.scale(2.0D));
-
-        if (ship != null && this.isVehicle()) {
+   @Override
+   public final void handleShoot(LivingEntity shooter) {
+      if (!this.level().isClientSide) {
+         ServerLevel serverLevel = (ServerLevel)this.level();
+         Ship s = VSGameUtilsKt.getShipManaging(this.getVehicle() != null ? this.getVehicle() : this);
+         BlockPos virtualPos = this.blockPosition();
+         Vec3 lookVec = this.getLookAngle();
+         Vec3 spawnPos = this.position().add(lookVec.scale(2.0));
+         if (s != null && this.isPassenger()) {
             virtualPos = this.getVehicle().blockPosition();
-        }
+         }
 
-        if (this.firingCooldown <= 0 && this.level().hasNeighborSignal(virtualPos)) {
+         if (this.firingCooldown <= 0 && this.level().isLoaded(virtualPos)) {
             if (this.belt == 0) {
-                serverLevel.playSound(null, this.getX(), this.getY(), this.getZ(),
-                        SoundEvents.DISPENSER_FAIL, SoundSource.BLOCKS, 1.0F, 0.0F);
+               serverLevel.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 1.0F, 0.0F);
             } else {
-                Vec3 direction = spawnPos.subtract(this.position()).normalize();
-                ItemStack ammoStack = new ItemStack(CBCItems.FLAK_AUTOCANNON_ROUND.get(), 1);
+               Vec3 vec1 = spawnPos.subtract(this.position()).normalize();
+               ItemStack ammoStack = new ItemStack((ItemLike)CBCItems.FLAK_AUTOCANNON_ROUND.get(), 1);
+               if (FUZE != null) {
+                  ammoStack.getOrCreateTag().put("Fuze", FUZE.serializeNBT());
+               }
 
-                if (FUZE != null) {
-                    ammoStack.getOrCreateTag().put("Fuze", FUZE.serializeNBT());
-                }
+               AbstractAutocannonProjectile projectile = this.AMMO.getAutocannonProjectile(ammoStack, serverLevel);
+               float speed = this.MACHINE_GUN_PROPERTIES.baseSpeed() + this.MACHINE_GUN_PROPERTIES.speedIncreasePerBarrel() * 7.0F;
+               float spread = 1.2F;
+               if (projectile != null) {
+                  projectile.setPos(spawnPos);
+                  projectile.setChargePower(7.0F);
+                  projectile.setTracer(false);
+                  projectile.setLifetime(this.MACHINE_GUN_PROPERTIES.projectileLifetime() * 3);
+                  projectile.shoot(vec1.x, vec1.y, vec1.z, speed, spread);
+                  projectile.xRotO = projectile.getXRot();
+                  projectile.yRotO = projectile.getYRot();
+                  serverLevel.addFreshEntity(projectile);
+               }
 
-                AbstractAutocannonProjectile projectile = this.AMMO.getAutocannonProjectile(ammoStack, serverLevel);
-                float speed = this.MACHINE_GUN_PROPERTIES.baseSpeed() +
-                        this.MACHINE_GUN_PROPERTIES.speedIncreasePerBarrel() * 7.0F;
-                float spread = 1.2F;
-
-                if (projectile != null) {
-                    projectile.setPos(spawnPos);
-                    projectile.setChargePower(7.0F);
-                    projectile.setTracer(false);
-                    projectile.setLifetime(this.MACHINE_GUN_PROPERTIES.projectileLifetime() * 3);
-                    projectile.shoot(direction.x, direction.y, direction.z, speed, spread);
-                    projectile.xRotO = projectile.getXRot();
-                    projectile.yRotO = projectile.getYRot();
-                    serverLevel.addFreshEntity(projectile);
-                }
-
-                CBCUtils.playBlastLikeSoundOnServer(serverLevel,
-                        spawnPos.x, spawnPos.y, spawnPos.z,
-                        CBCSoundEvents.FIRE_AUTOCANNON.getMainEvent(),
-                        SoundSource.BLOCKS, 12.0F, 1.0F, 5.0F);
-
-                this.belt--;
-                this.firingCooldown = 2;
+               CBCUtils.playBlastLikeSoundOnServer(
+                  serverLevel, spawnPos.x, spawnPos.y, spawnPos.z, CBCSoundEvents.FIRE_AUTOCANNON.getMainEvent(), SoundSource.BLOCKS, 12.0F, 1.0F, 5.0F
+               );
+               this.belt--;
+               this.firingCooldown = 2;
             }
-        }
-    }
+         }
+      }
+   }
 
-    @Override
-    public void designate() {
-        this.designatorTicks = 20.0F;
-        if (!this.level().isClientSide()) {
-            String code = getCode();
-            LaserPointEntity.shoot(this.level(), this.position(), this.getViewVector(1.0F), code);
-        }
-    }
+   @Override
+   public void designate() {
+      this.designatorTicks = 20.0F;
+      if (!this.level().isClientSide) {
+         String code = this.getCode();
+         LaserPointEntity.shoot(this.level(), this.position(), this.getLookAngle(), code);
+      }
+   }
 
-    @Override
-    public boolean isDesignatorActive() {
-        return this.designatorTicks > 0.0F;
-    }
+   @Override
+   public boolean isDesignatorActive() {
+      return this.designatorTicks > 0.0F;
+   }
 
-    @Override
-    public void turnView(double yRot, double xRot) {
-        super.turnView(yRot, xRot);
-        if (getRange() > 0 && (yRot != 0.0D || xRot != 0.0D)) {
-            setStabVector(this.getEyePosition().add(this.getViewVector(1.0F).scale(getRange())));
-        }
-    }
+   @Override
+   public void turnView(double yRot, double xRot) {
+      super.turnView(yRot, xRot);
+      if (this.getRange() > 0 && (yRot != 0.0 || xRot != 0.0)) {
+         this.setStabVector(this.getEyePosition().add(this.getLookAngle().scale(this.getRange())));
+      }
+   }
 
-    @Override
-    public InteractionResult interact(Player player, InteractionHand hand) {
-        if (CameraPossessionController.isPossessingConductor(player)) {
-            return InteractionResult.FAIL;
-        }
+   public InteractionResult interact(Player player, InteractionHand p_19979_) {
+      if (CameraPossessionController.isPossessingConductor(player)) {
+         return InteractionResult.FAIL;
+      }
 
-        if (!player.level().isClientSide()) {
-            if (player.getItemInHand(hand).getItem() instanceof com.simibubi.create.content.equipment.wrench.WrenchItem) {
-                this.discard();
-                return InteractionResult.CONSUME;
-            }
-            startViewing((ServerPlayer) player);
-        }
+      if (!player.level().isClientSide()) {
+         if (player.getItemInHand(p_19979_).getItem() instanceof WrenchItem) {
+            this.discard();
+            return InteractionResult.CONSUME;
+         }
 
-        return InteractionResult.SUCCESS;
-    }
+         this.startViewing((ServerPlayer)player);
+      }
 
-    @Override
-    public boolean isStab() {
-        return getRange() > 0;
-    }
+      return InteractionResult.SUCCESS;
+   }
 
-    public void setRange(int range) {
-        if (this.level().isClientSide()) {
-            CreateTypePacketHandler.getChannel().sendToServer(new RangePacket(this, range));
-        }
-        this.entityData.set(DATA_ID_RANGE_SETTING, range);
-    }
+   @Override
+   public boolean isStab() {
+      return this.getRange() > 0;
+   }
 
-    public int getRange() {
-        return this.entityData.get(DATA_ID_RANGE_SETTING);
-    }
+   public void setRange(int range) {
+      if (this.level().isClientSide) {
+         CreateTypePacketHandler.getChannel().sendToServer(new RangePacket(this, range));
+      }
 
-    @Override
-    public void onKeyPressed(byte keyMap) {
-        if (KeyBinds.isFuncKeyDown(keyMap, KeyBinds.SpecialFunctions.UP)) {
-            setRange(-1);
-        }
+      this.entityData.set(DATA_ID_RANGE_SETTING, range);
+   }
 
-        if (KeyBinds.isFuncKeyDown(keyMap, KeyBinds.SpecialFunctions.LEFT) ||
-                KeyBinds.isFuncKeyDown(keyMap, KeyBinds.SpecialFunctions.RIGHT)) {
-            this.opticMode.nextType();
-            Minecraft.getInstance().gameRenderer.checkEntityPostEffect(this);
-        }
-    }
+   public int getRange() {
+      return (Integer)this.entityData.get(DATA_ID_RANGE_SETTING);
+   }
 
-    @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(DATA_ID_RANGE_SETTING, -1);
-    }
+   @Override
+   public void onKeyPressed(byte keyMap) {
+      if (KeyBinds.isFuncKeyDown(keyMap, KeyBinds.SpecialFunctions.UP)) {
+         this.setRange(-1);
+      }
 
-    @NotNull
-    @Override
-    public CameraEntity2.PostFXType getOverlayType() {
-        return this.opticMode.getCurrentOptic();
-    }
+      if (KeyBinds.isFuncKeyDown(keyMap, KeyBinds.SpecialFunctions.LEFT) || KeyBinds.isFuncKeyDown(keyMap, KeyBinds.SpecialFunctions.RIGHT)) {
+         this.opticMode.nextType();
+         Minecraft.getInstance().gameRenderer.checkEntityPostEffect(this);
+      }
+   }
 
-    @Override
-    protected boolean isShortLived() {
-        return false;
-    }
+   @Override
+   protected void defineSynchedData() {
+      super.defineSynchedData();
+      this.entityData.define(DATA_ID_RANGE_SETTING, -1);
+   }
 
-    @Override
-    public boolean isPickable() {
-        return !this.isRemoved();
-    }
+   @NotNull
+   @Override
+   public CameraEntity2.PostFXType getOverlayType() {
+      return this.opticMode.getCurrentOptic();
+   }
 
-    @Override
-    protected float getEyeHeight(@NotNull Pose pose, EntityDimensions dimensions) {
-        return dimensions.height * 0.5F;
-    }
+   @Override
+   protected boolean isShortLived() {
+      return false;
+   }
+
+   public boolean isPickable() {
+      return !this.isRemoved();
+   }
+
+   @Override
+   protected float getEyeHeight(@NotNull Pose p, EntityDimensions dim) {
+      return dim.height * 0.5F;
+   }
 }

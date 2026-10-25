@@ -9,10 +9,10 @@ import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
-@Mixin({PlayerRecoilController.class})
+@Mixin(PlayerRecoilController.class)
 public abstract class MixinPlayerRecoilController {
-    @WrapOperation(method = {"onStartFiring"}, at = {@At(value = "INVOKE", target = "Lcom/vicmatskiv/pointblank/client/GunClientState;isAiming()Z")}, remap = false)
-    private boolean mixinStartFiring(GunClientState instance, Operation<Boolean> original, @Local LivingEntity player) {
-        return original.call(instance) || player.isAutoSpinAttack();
-    }
+   @WrapOperation(method = "onStartFiring", at = @At(value = "INVOKE", target = "Lcom/vicmatskiv/pointblank/client/GunClientState;isAiming()Z"), remap = false)
+   private boolean mixinStartFiring(GunClientState instance, Operation<Boolean> original, @Local LivingEntity player) {
+      return (Boolean)original.call(new Object[]{instance}) || player.isVisuallyCrawling();
+   }
 }

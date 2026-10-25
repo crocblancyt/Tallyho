@@ -43,7 +43,6 @@
     "mount.MixinHumanoidPose",
     "mount.MixinReloadHandler",
     "mount.MixinReloadTracker",
-    "some_peri.MixinScanInRadius",
     "sticker.MixinAbstractContraptionEntity",
     "sticker.MixinSmartBlockEntity",
     "sticker.MixinStickerTileEntity",

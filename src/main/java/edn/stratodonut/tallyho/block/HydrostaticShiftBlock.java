@@ -13,64 +13,51 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.BlockBehaviour.Properties;
 import net.minecraft.world.ticks.TickPriority;
 
 public class HydrostaticShiftBlock extends AbstractEncasedShaftBlock implements IBE<HydrostaticShiftBlockEntity> {
-
-    public HydrostaticShiftBlock(BlockBehaviour.Properties properties) {
+   public HydrostaticShiftBlock(Properties properties) {
       super(properties);
-    }
+   }
 
-    protected void detachKinetics(Level level, BlockPos pos, boolean reconnect) {
-        BlockEntity be = level.getBlockEntity(pos);
-        if (be instanceof KineticBlockEntity) {
-            KineticBlockEntity kbe = (KineticBlockEntity) be;
-            RotationPropagator.handleRemoved(level, pos, kbe);
-            TallyhoMod.warn("This thing actually does smth - HydrostaticShiftBlock:28");
-            if (reconnect) {
-                TallyhoMod.warn("This thing actually does smth - HydrostaticShiftBlock:31");
-                level.scheduleTick(pos, this, 0, TickPriority.EXTREMELY_HIGH);
-            }
-        }
-    }
+   protected void detachKinetics(Level level, BlockPos pos, boolean reconnect) {
+      if (level.getBlockEntity(pos) instanceof KineticBlockEntity kbe) {
+         RotationPropagator.handleRemoved(level, pos, kbe);
+         TallyhoMod.warn("This thing actually does smth - HydrostaticShiftBlock:28");
+         if (reconnect) {
+            TallyhoMod.warn("This thing actually does smth - HydrostaticShiftBlock:31");
+            level.scheduleTick(pos, this, 0, TickPriority.EXTREMELY_HIGH);
+         }
+      }
+   }
 
-    @Override
-    public void appendHoverText(ItemStack stack, @Nullable BlockGetter level,
-                                List<Component> tooltip, TooltipFlag flag) {
-      tooltip.add(Component.literal("Remanufactured")
-              .withStyle(Style.EMPTY.withColor(ChatFormatting.GRAY)));
-      super.appendHoverText(stack, level, tooltip, flag);
-      tooltip.add(Component.literal("Model: DS15FM14/14W-VTD527")
-              .withStyle(Style.EMPTY.withColor(ChatFormatting.GRAY)));
-      tooltip.add(Component.literal("MADE IN")
-              .withStyle(Style.EMPTY.withColor(ChatFormatting.GRAY)));
-      tooltip.add(Component.literal("The rest is scratched off and unreadable.")
-              .withStyle(Style.EMPTY.withColor(ChatFormatting.DARK_GRAY).withItalic(true)));
-    }
+   public void appendHoverText(ItemStack p_49816_, @Nullable BlockGetter p_49817_, List<Component> p_49818_, TooltipFlag p_49819_) {
+      p_49818_.add(Component.literal("Remanufactured").setStyle(Style.EMPTY.withColor(ChatFormatting.GRAY)));
+      super.appendHoverText(p_49816_, p_49817_, p_49818_, p_49819_);
+      p_49818_.add(Component.literal("Model: DS15FM14/14W-VTD527").setStyle(Style.EMPTY.withColor(ChatFormatting.GRAY)));
+      p_49818_.add(Component.literal("MADE IN").setStyle(Style.EMPTY.withColor(ChatFormatting.GRAY)));
+      p_49818_.add(Component.literal("The rest is scratched off and unreadable.").setStyle(Style.EMPTY.withColor(ChatFormatting.DARK_GRAY).withItalic(true)));
+   }
 
-    public void onPlace(BlockState state, ServerLevel level, BlockPos pos, BlockState oldState, boolean isMoving) {
-        BlockEntity be = level.getBlockEntity(pos);
-        if (be instanceof KineticBlockEntity) {
-            KineticBlockEntity kbe = (KineticBlockEntity) be;
-            RotationPropagator.handleAdded(level, pos, kbe);
-        }
-    }
+   public void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource rand) {
+      if (level.getBlockEntity(pos) instanceof KineticBlockEntity kbe) {
+         RotationPropagator.handleAdded(level, pos, kbe);
+      }
+   }
 
-    @Override
-    public Class<HydrostaticShiftBlockEntity> getBlockEntityClass() {
-        return HydrostaticShiftBlockEntity.class;
-    }
+   public Class<HydrostaticShiftBlockEntity> getBlockEntityClass() {
+      return HydrostaticShiftBlockEntity.class;
+   }
 
-    @Override
-    public BlockEntityType<HydrostaticShiftBlockEntity> getBlockEntityType() {
-        return AllBlockEntities.HYDRO_SHIFT.get();
-    }
+   public BlockEntityType<HydrostaticShiftBlockEntity> getBlockEntityType() {
+      return (BlockEntityType<HydrostaticShiftBlockEntity>)AllBlockEntities.HYDRO_SHIFT.get();
+   }
 }

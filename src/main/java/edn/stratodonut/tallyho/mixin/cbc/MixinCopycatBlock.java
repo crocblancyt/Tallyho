@@ -9,8 +9,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin({CopycatBlock.class})
+@Mixin(CopycatBlock.class)
 public abstract class MixinCopycatBlock {
-    @Inject(method = {"onRemove"}, at = {@At("HEAD")})
-    private void mixinOnRemove(BlockState pState, Level pLevel, BlockPos pPos, BlockState pNewState, boolean pIsMoving, CallbackInfo ci) {}
+   @Inject(method = "onRemove", at = @At("HEAD"))
+   private void mixinOnRemove(BlockState pState, Level pLevel, BlockPos pPos, BlockState pNewState, boolean pIsMoving, CallbackInfo ci) {
+   }
 }

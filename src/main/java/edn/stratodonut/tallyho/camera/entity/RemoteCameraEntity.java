@@ -12,102 +12,88 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.entity.EntityAccess;
 
 public class RemoteCameraEntity extends CameraEntity2 {
+   private ServerPlayer fakePlayer = null;
+   int timeout = 0;
+   private int initialChunkLoadingDistance = 0;
+   private boolean hasSentChunks = false;
 
-    private ServerPlayer fakePlayer = null;
-    int timeout;
-    private int initialChunkLoadingDistance;
-    private boolean hasSentChunks;
+   public RemoteCameraEntity(EntityType<? extends Entity> p_20966_, Level p_20967_) {
+      super(p_20966_, p_20967_);
+   }
 
-    public RemoteCameraEntity(EntityType<? extends Entity> entityType, Level level) {
-        super(entityType, level);
-        this.timeout = 0;
-        this.initialChunkLoadingDistance = 0;
-        this.hasSentChunks = false;
-    }
+   public static RemoteCameraEntity spawn(ServerLevel level, BlockPos pos, float base_yaw) {
+      RemoteCameraEntity result = new RemoteCameraEntity((EntityType<? extends Entity>)AllEntities.REMOTE_CAMERA.get(), level);
+      result.setParams(base_yaw, CameraEntity2.PostFXType.CAMERA, new AngleLimits(70.0F, 70.0F, 70.0F), 50);
+      result.setPos(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+      level.addFreshEntity(result);
+      FlexibleSeatEntity.sitDown(level, pos, result);
+      result.setYRot(base_yaw);
+      return result;
+   }
 
-    @Override
-    protected void defineSynchedData() {
+   @Override
+   public void tick() {
+      super.tick();
+      SectionPos sectionPos = SectionPos.of(this);
+      if (!sectionPos.equals(this.oldSectionPos)) {
+         this.setHasSentChunks(false);
+      }
 
-    }
+      if (this.level() instanceof ServerLevel serverLevel) {
+         if (this.fakePlayer == null) {
+            this.fakePlayer = new RemoteCameraFakePlayer(serverLevel, this);
+         }
 
-    public static RemoteCameraEntity spawn(ServerLevel level, BlockPos pos, float baseYaw) {
-        RemoteCameraEntity result = new RemoteCameraEntity((EntityType<? extends Entity>) AllEntities.REMOTE_CAMERA.get(), level);
-        result.setParams(baseYaw, CameraEntity2.PostFXType.CAMERA, new AngleLimits(70.0F, 70.0F, 70.0F), 50);
-        result.setPos(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D);
-        level.addFreshEntity(result);
-        FlexibleSeatEntity.sitDown(level, pos, result);
-        result.setYRot(baseYaw);
-        return result;
-    }
+         ServerPlayer player = this.currentlyViewing.get();
+         if (player != null) {
+            SectionPos chunkPos = SectionPos.of(this.blockPosition());
+            int viewDistance = player.server.getPlayerList().getViewDistance();
 
-    @Override
-    public void tick() {
-        super.tick();
-
-        SectionPos sectionPos = SectionPos.of(this);
-        if (!sectionPos.equals(this.oldSectionPos)) {
-            setHasSentChunks(false);
-        }
-
-        Level level = this.level();
-        if (level instanceof ServerLevel) {
-            ServerLevel serverLevel = (ServerLevel) level;
-
-            if (this.fakePlayer == null) {
-                this.fakePlayer = new RemoteCameraFakePlayer(serverLevel, this);
+            for (int x = chunkPos.getX() - viewDistance; x <= chunkPos.getX() + viewDistance; x++) {
+               for (int z = chunkPos.getZ() - viewDistance; z <= chunkPos.getZ() + viewDistance; z++) {
+                  serverLevel.getChunkSource().addRegionTicket(TicketType.FORCED, new ChunkPos(x, z), 3, new ChunkPos(x, z));
+               }
             }
+         }
+      }
+   }
 
-            ServerPlayer viewingPlayer = (ServerPlayer) this.currentlyViewing.get();
-            if (viewingPlayer instanceof ServerPlayer) {
-                ServerPlayer player = viewingPlayer;
-                SectionPos chunkPos = SectionPos.of(this.blockPosition());
-                int viewDistance = player.getServer().getPlayerList().getViewDistance();
+   @Override
+   public boolean startViewing(ServerPlayer player) {
+      if (super.startViewing(player)) {
+         int viewDistance = player.server.getPlayerList().getViewDistance();
+         this.setChunkLoadingDistance(viewDistance);
+         return true;
+      } else {
+         return false;
+      }
+   }
 
-                for (int x = chunkPos.getX() - viewDistance; x <= chunkPos.getX() + viewDistance; x++) {
-                    for (int z = chunkPos.getZ() - viewDistance; z <= chunkPos.getZ() + viewDistance; z++) {
-                        serverLevel.getChunkSource().addRegionTicket(TicketType.PLAYER, new ChunkPos(x, z), 3, new ChunkPos(x, z));
-                    }
-                }
-            }
-        }
-    }
+   @Override
+   public void stopViewing(ServerPlayer player) {
+      super.stopViewing(player);
+      RECENTLY_DISMOUNTED_PLAYERS.add(player);
+   }
 
-    @Override
-    public boolean startViewing(ServerPlayer player) {
-        if (super.startViewing(player)) {
-            int viewDistance = player.getServer().getPlayerList().getViewDistance();
-            setChunkLoadingDistance(viewDistance);
-            return true;
-        }
-        return false;
-    }
+   public void setChunkLoadingDistance(int chunkLoadingDistance) {
+      this.initialChunkLoadingDistance = chunkLoadingDistance;
+   }
 
-    @Override
-    public void stopViewing(ServerPlayer player) {
-        super.stopViewing(player);
-        RECENTLY_DISMOUNTED_PLAYERS.add(player);
-    }
+   public boolean hasSentChunks() {
+      return this.hasSentChunks;
+   }
 
-    public void setChunkLoadingDistance(int chunkLoadingDistance) {
-        this.initialChunkLoadingDistance = chunkLoadingDistance;
-    }
+   public void setHasSentChunks(boolean hasSentChunks) {
+      this.hasSentChunks = hasSentChunks;
+   }
 
-    public boolean hasSentChunks() {
-        return this.hasSentChunks;
-    }
+   public void stopRiding() {
+   }
 
-    public void setHasSentChunks(boolean hasSentChunks) {
-        this.hasSentChunks = hasSentChunks;
-    }
-
-    @Override
-    public void onAddedToWorld() {}
-
-    @Override
-    protected boolean isShortLived() {
-        return false;
-    }
+   @Override
+   protected boolean isShortLived() {
+      return false;
+   }
 }

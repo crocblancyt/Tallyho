@@ -12,51 +12,51 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 public class AltitudeFuze implements FuzeComponent {
-    private static final int ARMING_TICKS = 30;
+   private static final int ARMING_TICKS = 30;
+   public final float alt;
+   private int delayTicks;
 
-    public final float alt;
-    private int delayTicks;
+   protected AltitudeFuze(float alt, int delayTicks) {
+      this.alt = alt;
+      this.delayTicks = delayTicks;
+   }
 
-    protected AltitudeFuze(float alt, int delayTicks) {
-        this.alt = alt;
-        this.delayTicks = delayTicks;
-    }
+   @Override
+   public Optional<Vec3> tick(MountedMissileEntity missile, Level level, Vec3 pos, Vec3 del) {
+      if (missile.getTicksSinceLaunch() < 30) {
+         return Optional.empty();
+      } else {
+         return pos.y() < this.alt && this.delayTicks-- <= 0 ? Optional.of(pos) : Optional.empty();
+      }
+   }
 
-    public static class Factory implements IFuzeFactory<AltitudeFuze> {
-        public final float alt;
-        private final int delayTicks;
+   @Override
+   public boolean impact(MountedMissileEntity missile, Level level, Vec3 pos, Vec3 del) {
+      return false;
+   }
 
-        public Factory(float alt, int delayTicks) {
-            this.alt = alt;
-            this.delayTicks = delayTicks;
-        }
+   @Override
+   public boolean explodesOnExpiry() {
+      return false;
+   }
 
-        public AltitudeFuze create() {
-            return new AltitudeFuze(this.alt, this.delayTicks);
-        }
+   public static class Factory implements IFuzeFactory<AltitudeFuze> {
+      public final float alt;
+      private final int delayTicks;
 
-        public void appendHoverText(List<Component> components) {
-            components.add(Component.literal("Altitude Fuze").setStyle(Style.EMPTY
-                    .withColor(ChatFormatting.GRAY)));
-            components.add(Component.literal(String.format("Burst Alt: %sm", this.alt)).setStyle(Style.EMPTY
-                    .withColor(ChatFormatting.WHITE)));
-        }
-    }
+      public Factory(float alt, int delayTicks) {
+         this.alt = alt;
+         this.delayTicks = delayTicks;
+      }
 
-    public Optional<Vec3> tick(MountedMissileEntity missile, Level level, Vec3 pos, Vec3 del) {
-        if (missile.getTicksSinceLaunch() < 30)
-            return Optional.empty();
-        if (pos.y() < this.alt &&
-            this.delayTicks-- <= 0)
-            return Optional.of(pos);
-        return Optional.empty();
-    }
+      public AltitudeFuze create() {
+         return new AltitudeFuze(this.alt, this.delayTicks);
+      }
 
-    public boolean impact(MountedMissileEntity missile, Level level, Vec3 pos, Vec3 del) {
-        return false;
-    }
-
-    public boolean explodesOnExpiry() {
-        return false;
-    }
+      @Override
+      public void appendHoverText(List<Component> components) {
+         components.add(Component.literal("Altitude Fuze").setStyle(Style.EMPTY.withColor(ChatFormatting.GRAY)));
+         components.add(Component.literal(String.format("Burst Alt: %sm", this.alt)).setStyle(Style.EMPTY.withColor(ChatFormatting.WHITE)));
+      }
+   }
 }

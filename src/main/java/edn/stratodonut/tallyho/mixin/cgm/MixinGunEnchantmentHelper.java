@@ -9,10 +9,10 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Pseudo
-@Mixin(value = {GunEnchantmentHelper.class}, remap = false)
+@Mixin(value = GunEnchantmentHelper.class, remap = false)
 public abstract class MixinGunEnchantmentHelper {
-    @Inject(method = {"getAimDownSightSpeed"}, at = {@At("RETURN")}, cancellable = true)
-    private static void mixinGetAimDownSightSpeed(ItemStack weapon, CallbackInfoReturnable<Double> cir) {
-        cir.setReturnValue(Double.valueOf((cir.getReturnValue()).doubleValue() * 0.8D));
-    }
+   @Inject(method = "getAimDownSightSpeed", at = @At("RETURN"), cancellable = true)
+   private static void mixinGetAimDownSightSpeed(ItemStack weapon, CallbackInfoReturnable<Double> cir) {
+      cir.setReturnValue((Double)cir.getReturnValue() * 0.8);
+   }
 }

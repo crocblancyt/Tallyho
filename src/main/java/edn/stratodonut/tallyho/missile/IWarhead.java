@@ -7,11 +7,11 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 public interface IWarhead {
-    boolean detonate(Level paramLevel, Vec3 paramVec31, Vec3 paramVec32);
+   boolean detonate(Level var1, Vec3 var2, Vec3 var3);
 
-    void save(CompoundTag paramCompoundTag);
+   void save(CompoundTag var1);
 
-    void read(CompoundTag paramCompoundTag);
+   void read(CompoundTag var1);
 
-    void appendHoverText(List<Component> paramList);
+   void appendHoverText(List<Component> var1);
 }

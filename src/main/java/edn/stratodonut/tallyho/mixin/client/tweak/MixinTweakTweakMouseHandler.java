@@ -8,17 +8,18 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin({MouseCursorHandler.class})
+@Mixin(MouseCursorHandler.class)
 public class MixinTweakTweakMouseHandler implements TweakMouseHandlerDuck {
-    @Shadow
-    private static boolean mouseLockActive;
+   @Shadow
+   private static boolean mouseLockActive;
 
-    @Inject(method = {"CancelPlayerTurn"}, at = {@At("HEAD")}, remap = false, cancellable = true)
-    private static void cancelTheCancel(CallbackInfo ci) {
+   @Inject(method = "CancelPlayerTurn", at = @At("HEAD"), remap = false, cancellable = true)
+   private static void cancelTheCancel(CallbackInfo ci) {
       ci.cancel();
-    }
+   }
 
-    public boolean clockworkdev$isActive() {
+   @Override
+   public boolean clockworkdev$isActive() {
       return mouseLockActive;
-    }
+   }
 }

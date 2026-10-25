@@ -8,10 +8,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import rbasamoyai.ritchiesprojectilelib.RPLClient;
 import rbasamoyai.ritchiesprojectilelib.effects.CameraModifier;
 
-@Mixin({RPLClient.class})
+@Mixin(RPLClient.class)
 public abstract class MixinRPLClient {
-    @Inject(method = {"onCameraSetup"}, at = {@At("HEAD")}, cancellable = true, remap = false)
-    private static void modifyRPLShake(Camera camera, float partialTicks, CameraModifier modifier, CallbackInfoReturnable<Boolean> cir) {
-        cir.setReturnValue(Boolean.valueOf(false));
-    }
+   @Inject(method = "onCameraSetup", at = @At("HEAD"), cancellable = true, remap = false)
+   private static void modifyRPLShake(Camera camera, float partialTicks, CameraModifier modifier, CallbackInfoReturnable<Boolean> cir) {
+      cir.setReturnValue(false);
+   }
 }

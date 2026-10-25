@@ -9,12 +9,19 @@ import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
 
 @Pseudo
-@Mixin({ModInputEvents.class})
+@Mixin(ModInputEvents.class)
 public class MixinTweakedClick {
-    @WrapOperation(method = {"onClickInput"}, at = {@At(value = "INVOKE", target = "Lcom/getitemfromblock/create_tweaked_controllers/controller/TweakedLinkedControllerClientHandler;deactivateInLectern()V")}, remap = false)
-    private static void stopReset(Operation<Void> original) {
-        if (((AllConfigs.client()).disableQuickExit.get()).booleanValue())
-            return;
-        original.call(new Object[0]);
-    }
+   @WrapOperation(
+      method = "onClickInput",
+      at = @At(
+         value = "INVOKE",
+         target = "Lcom/getitemfromblock/create_tweaked_controllers/controller/TweakedLinkedControllerClientHandler;deactivateInLectern()V"
+      ),
+      remap = false
+   )
+   private static void stopReset(Operation<Void> original) {
+      if (!(Boolean)AllConfigs.client().disableQuickExit.get()) {
+         original.call(new Object[0]);
+      }
+   }
 }

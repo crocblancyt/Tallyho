@@ -1,7 +1,6 @@
 package edn.stratodonut.tallyho.mixin.cbc;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Position;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -23,50 +22,52 @@ import rbasamoyai.createbigcannons.cannon_control.contraption.PitchOrientedContr
 import riftyboi.cbcmodernwarfare.cannons.medium_cannon.MediumcannonBlockEntity;
 import riftyboi.cbcmodernwarfare.cannons.medium_cannon.breech.MediumcannonBreechBlockEntity;
 import riftyboi.cbcmodernwarfare.index.CBCModernWarfareItem;
+import riftyboi.cbcmodernwarfare.munitions.medium_cannon.MediumcannonAmmoItem;
 
-@Mixin(value = {MediumcannonBreechBlockEntity.class}, remap = false)
+@Mixin(value = MediumcannonBreechBlockEntity.class, remap = false)
 public abstract class MixinMediumCannonBreechBE extends MediumcannonBlockEntity {
-    @Shadow
-    private int loadingCooldown;
+   @Shadow
+   private int loadingCooldown;
+   @Unique
+   private boolean playSound;
 
-    @Unique
-    private boolean playSound;
+   public MixinMediumCannonBreechBE(BlockEntityType<?> type, BlockPos pos, BlockState state) {
+      super(type, pos, state);
+   }
 
-    public MixinMediumCannonBreechBE(BlockEntityType<?> type, BlockPos pos, BlockState state) {
-        super(type, pos, state);
-    }
+   @Shadow
+   public abstract boolean isOpen();
 
-    @Shadow
-    public abstract boolean isOpen();
+   @Shadow
+   public abstract void toggleOpening();
 
-    @Shadow
-    public abstract void toggleOpening();
+   @Shadow
+   public abstract boolean canBeAutomaticallyLoaded();
 
-    @Shadow
-    public abstract boolean canBeAutomaticallyLoaded();
+   @Inject(method = "setInputBuffer", at = @At("RETURN"))
+   private void mixinSetInputBuffer(ItemStack stack, CallbackInfo ci) {
+      Item i = stack.getItem();
+      if (i instanceof MediumcannonAmmoItem && !CBCModernWarfareItem.EMPTY_MEDIUMCANNON_CARTRIDGE.is(i)) {
+         if (this.isOpen()) {
+            this.toggleOpening();
+         }
 
-    @Inject(method = {"setInputBuffer"}, at = {@At("RETURN")})
-    private void mixinSetInputBuffer(ItemStack stack, CallbackInfo ci) {
-        Item i = stack.getItem();
-        if (i instanceof riftyboi.cbcmodernwarfare.munitions.medium_cannon.MediumcannonAmmoItem && !CBCModernWarfareItem.EMPTY_MEDIUMCANNON_CARTRIDGE.is(i)) {
-            if (isOpen())
-                toggleOpening();
-            this.playSound = true;
-        }
-    }
+         this.playSound = true;
+      }
+   }
 
-    @Inject(method = {"tickFromContraption"}, at = {@At("RETURN")})
-    public void mixinTickFromContraption(Level level, PitchOrientedContraptionEntity poce, BlockPos localPos, CallbackInfo ci) {
-        if (this.level != null && !this.level.isClientSide && this.playSound) {
-            this.playSound = false;
-            Vec3 v = poce.toGlobalVector(localPos.getCenter(), 0.0F);
-            SoundEvent s = SoundEvents.CROSSBOW_SHOOT;
-            level.playSound(null, BlockPos.containing(v), s, SoundSource.BLOCKS, 1.0F, 1.5F);
-        }
-    }
+   @Inject(method = "tickFromContraption", at = @At("RETURN"))
+   public void mixinTickFromContraption(Level level, PitchOrientedContraptionEntity poce, BlockPos localPos, CallbackInfo ci) {
+      if (this.level != null && !this.level.isClientSide && this.playSound) {
+         this.playSound = false;
+         Vec3 v = poce.toGlobalVector(localPos.getCenter(), 0.0F);
+         SoundEvent s = SoundEvents.IRON_TRAPDOOR_CLOSE;
+         level.playSound((Player)null, BlockPos.containing(v), s, SoundSource.BLOCKS, 1.0F, 1.5F);
+      }
+   }
 
-    @Inject(method = {"canBeAutomaticallyLoaded"}, at = {@At("HEAD")}, cancellable = true)
-    private void mixinCanBeAutomaticallyLoaded(CallbackInfoReturnable<Boolean> cir) {
-        cir.setReturnValue((this.loadingCooldown <= 0 && isOpen()));
-    }
+   @Inject(method = "canBeAutomaticallyLoaded", at = @At("HEAD"), cancellable = true)
+   private void mixinCanBeAutomaticallyLoaded(CallbackInfoReturnable<Boolean> cir) {
+      cir.setReturnValue(this.loadingCooldown <= 0 && this.isOpen());
+   }
 }

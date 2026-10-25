@@ -3,7 +3,7 @@ package edn.stratodonut.tallyho.mixinducks;
 import com.vicmatskiv.pointblank.client.effect.EffectBuilder;
 import com.vicmatskiv.pointblank.item.AmmoItem;
 import com.vicmatskiv.pointblank.item.FireModeInstance;
-import com.vicmatskiv.pointblank.item.GunItem;
+import com.vicmatskiv.pointblank.item.GunItem.FirePhase;
 import java.util.List;
 import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
@@ -13,15 +13,15 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.HitResult;
 
 public interface MixinGunItemDuck {
-    double tyh$AdjustInaccuracy(Player paramPlayer, ItemStack paramItemStack, boolean paramBoolean);
+   double tyh$AdjustInaccuracy(Player var1, ItemStack var2, boolean var3);
 
-    AmmoItem tyh$getFirstCompatibleProjectile(ItemStack paramItemStack, FireModeInstance paramFireModeInstance);
+   AmmoItem tyh$getFirstCompatibleProjectile(ItemStack var1, FireModeInstance var2);
 
-    double tyh$getMaxServerShootingDistance(ItemStack paramItemStack, boolean paramBoolean, ServerLevel paramServerLevel);
+   double tyh$getMaxServerShootingDistance(ItemStack var1, boolean var2, ServerLevel var3);
 
-    void tyh$hitScanTarget(Player paramPlayer, ItemStack paramItemStack, int paramInt1, int paramInt2, HitResult paramHitResult, double paramDouble, List<BlockPos> paramList);
+   void tyh$hitScanTarget(Player var1, ItemStack var2, int var3, int var4, HitResult var5, double var6, List<BlockPos> var8);
 
-    long tyh$getOrAssignRandomSeed(ItemStack paramItemStack);
+   long tyh$getOrAssignRandomSeed(ItemStack var1);
 
-    List<Supplier<EffectBuilder<? extends EffectBuilder<?, ?>, ?>>> tyh$getPhaseBuilders(GunItem.FirePhase paramFirePhase);
+   List<Supplier<EffectBuilder<? extends EffectBuilder<?, ?>, ?>>> tyh$getPhaseBuilders(FirePhase var1);
 }

@@ -4,7 +4,7 @@ import edn.stratodonut.tallyho.network.RecoilingCannonUpdatePacket;
 import net.minecraft.world.phys.Vec3;
 
 public interface RecoilingCannonEntity {
-    void recoil(Vec3 paramVec3);
+   void recoil(Vec3 var1);
 
-    void handlePacket(RecoilingCannonUpdatePacket paramRecoilingCannonUpdatePacket);
+   void handlePacket(RecoilingCannonUpdatePacket var1);
 }

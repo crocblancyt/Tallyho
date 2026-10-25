@@ -9,7 +9,6 @@ import java.util.UUID;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.Vec3i;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -17,11 +16,11 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.Item.Properties;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
@@ -32,121 +31,79 @@ import org.valkyrienskies.mod.common.VSGameUtilsKt;
 import org.valkyrienskies.mod.common.util.VectorConversionsMCKt;
 
 public class TargetPodRemote extends Item {
+   public TargetPodRemote(Properties p_41383_) {
+      super(p_41383_);
+   }
 
-    public TargetPodRemote(Item.Properties properties) {
-        super(properties);
-    }
+   public void appendHoverText(@NotNull ItemStack stack, @Nullable Level level, @NotNull List<Component> tooltip, @NotNull TooltipFlag flag) {
+      super.appendHoverText(stack, level, tooltip, flag);
+      CompoundTag tag = stack.getTag();
+      if (tag != null && tag.hasUUID("SelectedRemote")) {
+         UUID conductorId = tag.getUUID("SelectedRemote");
+         tooltip.add(Components.translatable("railways.whistle.tool.bound").withStyle(ChatFormatting.DARK_GREEN));
+         tooltip.add(Components.translatable("railways.whistle.tool.conductor_id", new Object[]{conductorId.toString().substring(0, 5)}));
+         tooltip.add(Components.translatable("railways.remote_lens.tool.bound_usage"));
+      } else {
+         tooltip.add(Components.translatable("railways.remote_lens.tool.not_bound").withStyle(ChatFormatting.DARK_RED));
+      }
+   }
 
-    @Override
-    public void appendHoverText(@NotNull ItemStack stack, @Nullable Level level, @NotNull List<Component> tooltip, @NotNull TooltipFlag flag) {
-        super.appendHoverText(stack, level, tooltip, flag);
+   public InteractionResult useOn(UseOnContext ctx) {
+      Level level = ctx.getLevel();
+      BlockPos pos = ctx.getClickedPos();
+      ItemStack stack = ctx.getItemInHand();
+      if (stack.hasTag() && stack.getOrCreateTag().hasUUID("SelectedRemote")) {
+         return this.use(ctx.getLevel(), ctx.getPlayer(), ctx.getHand()).getResult();
+      }
 
-        CompoundTag tag = stack.getTag();
-        if (tag != null && tag.contains("SelectedRemote")) {
-            UUID conductorId = tag.getUUID("SelectedRemote");
-            tooltip.add(Components.translatable("railways.whistle.tool.bound").withStyle(ChatFormatting.DARK_GREEN));
-            tooltip.add(Components.translatable("railways.whistle.tool.conductor_id", conductorId.toString().substring(0, 5)));
-            tooltip.add(Components.translatable("railways.remote_lens.tool.bound_usage"));
-        } else {
-            tooltip.add(Components.translatable("railways.remote_lens.tool.not_bound").withStyle(ChatFormatting.DARK_RED));
-        }
-    }
+      if (level.isClientSide) {
+         return InteractionResult.CONSUME;
+      }
 
-    @Override
-    public InteractionResult useOn(UseOnContext context) {
-        Level level = context.getLevel();
-        BlockPos pos = context.getClickedPos();
-        ItemStack stack = context.getItemInHand();
+      if (level instanceof ServerLevel serverLevel && ctx.getPlayer() instanceof ServerPlayer serverPlayer) {
+         Ship s = VSGameUtilsKt.getShipManagingPos(level, pos);
+         Vector3d lookInShip = VectorConversionsMCKt.toJOML(serverPlayer.getLookAngle());
+         if (s != null) {
+            lookInShip = s.getWorldToShip().transformDirection(lookInShip);
+         }
 
-        if (stack.hasCustomHoverName() && stack.getOrCreateTag().contains("SelectedRemote")) {
-            return this.use(level, context.getPlayer(), context.getHand()).getResult();
-        }
+         Direction facing = Direction.getNearest(lookInShip.x, 0.0, lookInShip.z).getOpposite();
+         CameraEntity2 c = TargetingPodEntity.spawn(serverLevel, pos.relative(Direction.DOWN).relative(facing), facing.toYRot());
+         CompoundTag nbt = stack.getOrCreateTag();
+         nbt.putUUID("SelectedRemote", c.getUUID());
+         stack.setTag(nbt);
+         serverPlayer.setItemInHand(ctx.getHand(), stack);
+         serverPlayer.displayClientMessage(Components.translatable("railways.remote_lens.set"), true);
+         AllSoundEvents.PECULIAR_BELL_USE.play(serverPlayer.level(), null, c.getX(), c.getY(), c.getZ(), 0.5F, 1.1F);
+         return InteractionResult.SUCCESS;
+      } else {
+         return super.useOn(ctx);
+      }
+   }
 
-        if (level.isClientSide()) {
-            return InteractionResult.CONSUME;
-        }
-
-        if (level instanceof ServerLevel) {
-            ServerLevel serverLevel = (ServerLevel) level;
-            Player player = context.getPlayer();
-
-            if (player instanceof ServerPlayer) {
-                ServerPlayer serverPlayer = (ServerPlayer) player;
-                Ship ship = VSGameUtilsKt.getShipManagingPos(level, pos);
-
-                Vector3d lookInShip = VectorConversionsMCKt.toJOML(serverPlayer.getViewVector(1.0F));
-                if (ship != null) {
-                    lookInShip = ship.getWorldToShip().transformDirection(lookInShip);
-                }
-
-                Direction facing = Direction.getNearest(lookInShip.x, 0.0D, lookInShip.z).getOpposite();
-
-                TargetingPodEntity targetingPodEntity = TargetingPodEntity.spawn(
-                    serverLevel,
-                    pos.relative(Direction.DOWN).relative(facing),
-                    facing.toYRot()
-                );
-
-                CompoundTag nbt = stack.getOrCreateTag();
-                nbt.putUUID("SelectedRemote", targetingPodEntity.getUUID());
-                stack.setTag(nbt);
-
-                serverPlayer.setItemInHand(context.getHand(), stack);
-                serverPlayer.displayClientMessage(Components.translatable("railways.remote_lens.set"), true);
-
-                AllSoundEvents.PECULIAR_BELL_USE.play(
-                    serverPlayer.level(), null,
-                    targetingPodEntity.getX(), targetingPodEntity.getY(), targetingPodEntity.getZ(),
-                    0.5F, 1.1F
-                );
-
-                return InteractionResult.SUCCESS;
+   @NotNull
+   public InteractionResultHolder<ItemStack> use(@NotNull Level level, Player player, @NotNull InteractionHand usedHand) {
+      ItemStack stack = player.getItemInHand(usedHand);
+      if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
+         CompoundTag stackTag = stack.getTag();
+         if (stackTag != null && stackTag.hasUUID("SelectedRemote")) {
+            UUID cameraId = stackTag.getUUID("SelectedRemote");
+            if (player.isShiftKeyDown()) {
+               stack.removeTagKey("SelectedRemote");
+               AllSoundEvents.CONTROLLER_CLICK.play(level, (Player)null, player.blockPosition(), 0.5F, 1.1F);
+               player.displayClientMessage(Components.translatable("railways.remote_lens.clear"), true);
+               return InteractionResultHolder.success(stack);
+            } else if (serverLevel.getEntity(cameraId) instanceof CameraEntity2 camera) {
+               return camera.startViewing(serverPlayer) ? InteractionResultHolder.success(stack) : InteractionResultHolder.fail(stack);
+            } else {
+               player.displayClientMessage(Components.literal("No connection to camera!"), true);
+               return InteractionResultHolder.fail(stack);
             }
-        }
-
-        return super.useOn(context);
-    }
-
-    @NotNull
-    @Override
-    public InteractionResultHolder<ItemStack> use(@NotNull Level level, Player player, @NotNull InteractionHand usedHand) {
-        ItemStack stack = player.getItemInHand(usedHand);
-
-        if (level instanceof ServerLevel) {
-            ServerLevel serverLevel = (ServerLevel) level;
-
-            if (player instanceof ServerPlayer) {
-                ServerPlayer serverPlayer = (ServerPlayer) player;
-                CompoundTag stackTag = stack.getTag();
-
-                if (stackTag != null && stackTag.contains("SelectedRemote")) {
-                    UUID cameraId = stackTag.getUUID("SelectedRemote");
-
-                    if (player.isShiftKeyDown()) {
-                        stackTag.remove("SelectedRemote");
-                        AllSoundEvents.CONTROLLER_CLICK.play(level, null, player.blockPosition(), 0.5F, 1.1F);
-                        player.displayClientMessage(Components.translatable("railways.remote_lens.clear"), true);
-                        return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
-                    }
-
-                    Entity entity = serverLevel.getEntity(cameraId);
-                    if (entity instanceof CameraEntity2) {
-                        CameraEntity2 camera = (CameraEntity2) entity;
-                        if (camera.startViewing(serverPlayer)) {
-                            return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
-                        } else {
-                            return InteractionResultHolder.fail(stack);
-                        }
-                    }
-
-                    player.displayClientMessage(Component.literal("No connection to camera!"), true);
-                    return InteractionResultHolder.fail(stack);
-                }
-
-                return InteractionResultHolder.fail(stack);
-            }
-        }
-
-        return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
-    }
+         } else {
+            return InteractionResultHolder.fail(stack);
+         }
+      } else {
+         return InteractionResultHolder.success(stack);
+      }
+   }
 }

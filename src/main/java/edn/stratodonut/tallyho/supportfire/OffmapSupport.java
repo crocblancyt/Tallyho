@@ -11,68 +11,60 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 
 public abstract class OffmapSupport {
-    Random random = new Random();
+   Random random = new Random();
+   @Nullable
+   UUID callerUUID = null;
+   private boolean dropping = false;
+   private boolean complete = false;
 
-    @Nullable
-    UUID callerUUID = null;
+   public boolean strike(LivingEntity caller) {
+      if (caller instanceof Player p) {
+         this.callerUUID = p.getUUID();
+      }
 
-    private boolean dropping = false;
-    private boolean complete = false;
+      return true;
+   }
 
-    public enum DropPattern {
-        CIRCLE, LINE;
-    }
+   public void tick(Level world) {
+   }
 
-    public boolean strike(LivingEntity caller) {
-        if (caller instanceof Player) {
-            Player p = (Player)caller;
-            this.callerUUID = p.getUUID();
-        }
-        return true;
-    }
+   public boolean isComplete() {
+      return this.complete;
+   }
 
-    public void tick(Level world) {}
+   public boolean isDropping() {
+      return this.dropping;
+   }
 
-    public boolean isComplete() {
-        return this.complete;
-    }
+   public void complete(@Nullable Level level) {
+      this.complete = true;
+   }
 
-    public boolean isDropping() {
-        return this.dropping;
-    }
+   public void startDrop(@Nullable Level level) {
+      this.dropping = true;
+   }
 
-    public void complete(@Nullable Level level) {
-        this.complete = true;
-    }
+   public abstract void appendHoverText(List<Component> var1);
 
-    public void startDrop(@Nullable Level level) {
-        this.dropping = true;
-    }
+   @Nullable
+   public static OffmapSupport readFromNBT(CompoundTag nbt) {
+      if (nbt.contains("StrikeTag")) {
+         CompoundTag strikeTag = nbt.getCompound("StrikeTag");
+         if (strikeTag.contains("Type")) {
+            return switch (strikeTag.getString("Type")) {
+               case "Carpet" -> new CarpetBombStrike(strikeTag.getString("MissileId"), strikeTag.getInt("Qty"));
+               default -> new LazedMissileStrike(strikeTag.getString("MissileId"));
+            };
+         }
+      }
 
-    public abstract void appendHoverText(List<Component> components);
+      return null;
+   }
 
-    @Nullable
-    public static OffmapSupport readFromNBT(CompoundTag nbt) {
-        if (nbt == null) return null;
-        
-        if (nbt.contains("StrikeTag")) {
-            CompoundTag strikeTag = nbt.getCompound("StrikeTag");
-            if (strikeTag.contains("Type")) {
-                String type = strikeTag.getString("Type");
-                switch (type) {
-                    case "Carpet":
-                        return new CarpetBombStrike(strikeTag.getString("MissileId"), strikeTag.getInt("Qty"));
-                    case "Precision":
-                        return new LazedMissileStrike(strikeTag.getString("MissileId"));
-                    case "Cluster":
-                        return new ClusterStrike(strikeTag.getString("MissileId"));
-                    default:
-                        return null;
-                }
-            }
-        }
-        return null;
-    }
+   public abstract void addToNBT(CompoundTag var1);
 
-    public abstract void addToNBT(CompoundTag nbt);
+   public enum DropPattern {
+      CIRCLE,
+      LINE;
+   }
 }

@@ -9,12 +9,12 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Pseudo
-@Mixin(value = {AimingHandler.class}, remap = false)
+@Mixin(value = AimingHandler.class, remap = false)
 public abstract class MixinAimingHandler {
-    @Inject(method = {"isAiming"}, at = {@At("RETURN")}, cancellable = true)
-    private void mixinIsAiming(CallbackInfoReturnable<Boolean> cir) {
-        if (Minecraft.getInstance().player != null &&
-            Minecraft.getInstance().player.isFallFlying())
-            cir.setReturnValue(false);
-    }
+   @Inject(method = "isAiming", at = @At("RETURN"), cancellable = true)
+   private void mixinIsAiming(CallbackInfoReturnable<Boolean> cir) {
+      if (Minecraft.getInstance().player != null && Minecraft.getInstance().player.isSprinting()) {
+         cir.setReturnValue(false);
+      }
+   }
 }

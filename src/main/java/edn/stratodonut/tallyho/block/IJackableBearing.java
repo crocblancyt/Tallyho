@@ -1,8 +1,8 @@
 package edn.stratodonut.tallyho.block;
 
-import net.minecraft.core.Direction;
+import net.minecraft.core.Direction.Axis;
 import net.minecraft.world.phys.Vec3;
 
 public interface IJackableBearing {
-    void clockworkdev$setOffset(Direction.Axis paramAxis, Vec3 paramVec3);
+   void clockworkdev$setOffset(Axis var1, Vec3 var2);
 }

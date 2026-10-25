@@ -6,12 +6,13 @@ import edn.stratodonut.tallyho.mixinducks.MixinAbstractContraptionEntityDuck;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 
-@Mixin({AbstractContraptionEntity.class})
+@Mixin(AbstractContraptionEntity.class)
 public abstract class MixinAbstractContraptionEntity implements MixinAbstractContraptionEntityDuck {
-    @Shadow
-    protected abstract StructureTransform makeStructureTransform();
+   @Shadow
+   protected abstract StructureTransform makeStructureTransform();
 
-    public StructureTransform getStructureTransform() {
-      return makeStructureTransform();
-    }
+   @Override
+   public StructureTransform getStructureTransform() {
+      return this.makeStructureTransform();
+   }
 }

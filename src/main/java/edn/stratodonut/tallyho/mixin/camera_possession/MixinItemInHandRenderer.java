@@ -7,11 +7,12 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin({ItemInHandRenderer.class})
+@Mixin(ItemInHandRenderer.class)
 public class MixinItemInHandRenderer {
-    @Inject(method = {"renderHandsWithItems"}, at = {@At("HEAD")}, cancellable = true)
-    private void railways$cancelHandRendering(CallbackInfo ci) {
-      if (CameraClientHandler.isPlayerMountedOnCamera())
-          ci.cancel();
-    }
+   @Inject(method = "renderHandsWithItems", at = @At("HEAD"), cancellable = true)
+   private void railways$cancelHandRendering(CallbackInfo ci) {
+      if (CameraClientHandler.isPlayerMountedOnCamera()) {
+         ci.cancel();
+      }
+   }
 }

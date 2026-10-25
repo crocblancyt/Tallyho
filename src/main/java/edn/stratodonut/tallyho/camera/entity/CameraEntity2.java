@@ -35,343 +35,307 @@ import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3d;
 import org.valkyrienskies.core.api.ships.ClientShip;
-import org.valkyrienskies.core.api.ships.LoadedShip;
+import org.valkyrienskies.core.api.ships.Ship;
 import org.valkyrienskies.mod.common.VSGameUtilsKt;
 import org.valkyrienskies.mod.common.util.VectorConversionsMCKt;
 
 public abstract class CameraEntity2 extends Entity implements IEntityAdditionalSpawnData {
+   private float BASE_YAW;
+   private AngleLimits ANGLE_LIMIT = new AngleLimits(0.0F, 0.0F, 0.0F);
+   private int FOV;
+   public static final List<Player> RECENTLY_DISMOUNTED_PLAYERS = new ArrayList<>();
+   @Nonnull
+   protected WeakReference<ServerPlayer> currentlyViewing = new WeakReference<>(null);
+   public SectionPos oldSectionPos = null;
+   public double firstGoodX;
+   public double firstGoodY;
+   public double firstGoodZ;
+   public double lastGoodX;
+   public double lastGoodY;
+   public double lastGoodZ;
+   public int receivedMovePacketCount;
+   public int knownMovePacketCount;
+   public double xLast;
+   public double yLast;
+   public double zLast;
+   public double xRotLast;
+   public double yRotLast;
+   int timeout = 0;
 
-    private float baseYaw;
-    private AngleLimits angleLimit = new AngleLimits(0.0F, 0.0F, 0.0F);
-    private int fov;
+   public CameraEntity2(EntityType<? extends Entity> p_20966_, Level p_20967_) {
+      super(p_20966_, p_20967_);
+   }
 
-    public static final List<Player> RECENTLY_DISMOUNTED_PLAYERS = new ArrayList<>();
+   public static boolean hasRecentlyDismounted(Player player) {
+      return RECENTLY_DISMOUNTED_PLAYERS.remove(player);
+   }
 
-    @Nonnull
-    protected WeakReference<ServerPlayer> currentlyViewing = new WeakReference<>(null);
+   protected void setParams(float base_yaw, @Deprecated CameraEntity2.PostFXType optic_type, AngleLimits angle_limit, int fov) {
+      this.ANGLE_LIMIT = angle_limit;
+      this.BASE_YAW = base_yaw;
+      this.FOV = fov;
+   }
 
-    public SectionPos oldSectionPos = null;
-    public double firstGoodX;
-    public double firstGoodY;
-    public double firstGoodZ;
-    public double lastGoodX;
-    public double lastGoodY;
-    public double lastGoodZ;
-    public int receivedMovePacketCount;
-    public int knownMovePacketCount;
-    public double xLast;
-    public double yLast;
-    public double zLast;
-    public double xRotLast;
-    public double yRotLast;
-    int timeout;
+   public boolean startViewing(ServerPlayer player) {
+      ServerPlayer current = this.currentlyViewing.get();
+      if (current != null && current.getCamera() == this && current.isAlive() && current != player) {
+         return false;
+      }
 
-    public CameraEntity2(EntityType<? extends Entity> entityType, Level level) {
-        super(entityType, level);
-        this.timeout = 0;
-    }
+      ServerLevel serverLevel = player.serverLevel();
+      if (serverLevel != this.level()) {
+         return false;
+      }
 
-    public static boolean hasRecentlyDismounted(Player player) {
-        return RECENTLY_DISMOUNTED_PLAYERS.remove(player);
-    }
+      this.currentlyViewing = new WeakReference<>(player);
+      this.oldSectionPos = null;
+      SectionPos chunkPos = SectionPos.of(this.blockPosition());
+      int viewDistance = player.server.getPlayerList().getViewDistance();
+      if (player.getCamera() instanceof CameraEntity2 conductor) {
+         conductor.stopViewing(player);
+      }
 
-    protected void setParams(float baseYaw, @Deprecated PostFXType opticType, AngleLimits angleLimit, int fov) {
-        this.angleLimit = angleLimit;
-        this.baseYaw = baseYaw;
-        this.fov = fov;
-    }
+      player.camera = this;
+      CreateTypePacketHandler.getChannel().send(PacketDistributor.PLAYER.with(() -> player), new SetCameraViewPacket(this));
+      this.resetPosition();
+      return true;
+   }
 
-    public boolean startViewing(ServerPlayer player) {
-        ServerPlayer current = this.currentlyViewing.get();
-        if (current != null && current.getVehicle() == this && current.isAlive() && current != player) {
-          return false;
-        }
+   protected float getEyeHeight(@NotNull Pose p, EntityDimensions dim) {
+      return dim.height;
+   }
 
-        ServerLevel serverLevel = player.serverLevel();
-        if (serverLevel != this.level()) {
-          return false;
-        }
+   public double getMyRidingOffset() {
+      return -0.25;
+   }
 
-        this.currentlyViewing = new WeakReference<>(player);
-        this.oldSectionPos = null;
-        SectionPos chunkPos = SectionPos.of(this.blockPosition());
-        int viewDistance = player.getServer().getPlayerList().getViewDistance();
+   public void stopViewing(ServerPlayer player) {
+      if (!this.level().isClientSide) {
+         this.currentlyViewing.clear();
+         player.camera = player;
+         CreateTypePacketHandler.getChannel().send(PacketDistributor.PLAYER.with(() -> player), new SetCameraViewPacket(player));
+         if (this.isShortLived()) {
+            this.discard();
+         }
+      }
+   }
 
-        Entity entity = player.getVehicle();
-        if (entity instanceof CameraEntity2) {
-          CameraEntity2 conductor = (CameraEntity2) entity;
-          conductor.stopViewing(player);
-        }
+   protected boolean isShortLived() {
+      return true;
+   }
 
-        player.setCamera(this);
-        CreateTypePacketHandler.getChannel().send(PacketDistributor.PLAYER.with(() -> player),
-                new SetCameraViewPacket(this));
-        resetPosition();
-        return true;
-    }
+   private void resetPosition() {
+      this.firstGoodX = this.lastGoodX = this.getX();
+      this.firstGoodY = this.lastGoodY = this.getY();
+      this.firstGoodZ = this.lastGoodZ = this.getZ();
+      this.knownMovePacketCount = this.receivedMovePacketCount;
+   }
 
-    @Override
-    protected float getEyeHeight(@NotNull Pose pose, EntityDimensions dimensions) {
-        return dimensions.height;
-    }
+   public void tick() {
+      this.resetPosition();
+      if (this.level().isClientSide) {
+         CameraPossessionController.tryUpdatePossession(this);
+         this.updatePossessionInputs();
+      }
 
-    @Override
-    public double getMyRidingOffset() {
-        return -0.25D;
-    }
+      super.tick();
+      if (!this.level().isClientSide) {
+         if (this.isShortLived() && this.currentlyViewing.get() == null) {
+            this.timeout++;
+         }
 
-    public void stopViewing(ServerPlayer player) {
-        if (!this.level().isClientSide()) {
-            this.currentlyViewing.clear();
-            player.setCamera(player);
-            CreateTypePacketHandler.getChannel().send(PacketDistributor.PLAYER.with(() -> player),
-                    new SetCameraViewPacket(player));
-            if (isShortLived()) {
-                this.discard();
-            }
-        }
-    }
+         if (this.getVehicle() == null) {
+            this.timeout++;
+         }
 
-    protected boolean isShortLived() {
-        return true;
-    }
+         if (this.timeout > 100) {
+            this.discard();
+         }
+      }
+   }
 
-    private void resetPosition() {
-        this.firstGoodX = this.lastGoodX = this.getX();
-        this.firstGoodY = this.lastGoodY = this.getY();
-        this.firstGoodZ = this.lastGoodZ = this.getZ();
-        this.knownMovePacketCount = this.receivedMovePacketCount;
-    }
+   protected void onBelowWorld() {
+      if (!this.isPassenger()) {
+         super.onBelowWorld();
+      }
+   }
 
-    @Override
-    public void tick() {
-        resetPosition();
-        if (this.level().isClientSide()) {
-            CameraPossessionController.tryUpdatePossession(this);
-            updatePossessionInputs();
-        }
-        super.tick();
-        if (!this.level().isClientSide()) {
-            if (isShortLived() && this.currentlyViewing.get() == null) {
-                this.timeout++;
-            }
-            if (this.getVehicle() == null) {
-                this.timeout++;
-            }
-            if (this.timeout > 100) {
-                this.discard();
-            }
-        }
-    }
+   public void turn(double p_19885_, double p_19886_) {
+      super.turn(p_19885_, p_19886_);
+   }
 
-    @Override
-    protected void onBelowWorld() {
-        if (isPassenger())
-            return;
-        super.onBelowWorld();
-    }
+   public void turnView(double yRot, double xRot) {
+      this.turnView(yRot, xRot, false);
+   }
 
-    @Override
-    public void turn(double yRot, double xRot) {
-        super.turn(yRot, xRot);
-    }
+   public void turnView(double yRot, double xRot, boolean raw) {
+      AngleLimits limit = this.getRotationLimit();
+      float base_yaw = this.getBaseYaw();
+      float sense = !raw && this.getFOV() > 0 ? this.getFOV() / 70.0F : 1.0F;
+      float f = (float)xRot * sense;
+      float g = (float)yRot * sense;
+      this.setXRot(Mth.clamp(this.getXRot() + f, -limit.upperX(), limit.lowerX()));
+      if (limit.Y() >= 180.0F) {
+         this.setYRot(this.getYRot() + g);
+      } else {
+         this.setYRot(Mth.rotateIfNecessary(this.getYRot() + g, base_yaw, limit.Y()));
+      }
 
-    public void turnView(double yRot, double xRot) {
-        turnView(yRot, xRot, false);
-    }
+      this.xRotO += f;
+      this.yRotO += g;
+      this.xRotO = Mth.clamp(this.xRotO, -limit.upperX(), limit.lowerX());
+      if (limit.Y() < 180.0F) {
+         this.yRotO = Mth.clamp(this.yRotO, base_yaw - limit.Y(), base_yaw + limit.Y());
+      }
 
-    public void turnView(double yRot, double xRot, boolean raw) {
-        AngleLimits limit = getRotationLimit();
-        float baseYaw = getBaseYaw();
-        float sensitivity = (raw || getFOV() <= 0) ? 1.0F : (getFOV() / 70.0F);
-        float pitchDelta = (float) xRot * sensitivity;
-        float yawDelta = (float) yRot * sensitivity;
+      if (this.getVehicle() != null) {
+         this.getVehicle().onPassengerTurned(this);
+      }
+   }
 
-        this.setXRot(Mth.clamp(this.getXRot() + pitchDelta, -limit.upperX(), limit.lowerX()));
+   @Nonnull
+   public CameraEntity2.PostFXType getOverlayType() {
+      return CameraEntity2.PostFXType.NONE;
+   }
 
-        if (limit.Y() >= 180.0F) {
-            this.setYRot(this.getYRot() + yawDelta);
-        } else {
-            this.setYRot(Mth.rotateIfNecessary(this.getYRot() + yawDelta, baseYaw, limit.Y()));
-        }
+   public int getFOV() {
+      return this.FOV;
+   }
 
-        this.xRotO += pitchDelta;
-        this.yRotO += yawDelta;
-        this.xRotO = Mth.clamp(this.xRotO, -limit.upperX(), limit.lowerX());
+   public AngleLimits getRotationLimit() {
+      return this.ANGLE_LIMIT;
+   }
 
-        if (limit.Y() < 180.0F) {
-            this.yRotO = Mth.clamp(this.yRotO, baseYaw - limit.Y(), baseYaw + limit.Y());
-        }
+   public float getBaseYaw() {
+      return this.BASE_YAW;
+   }
 
-        if (this.getVehicle() != null) {
-            this.getVehicle().onPassengerTurned(this);
-        }
-    }
+   public void updatePossessionInputs() {
+      if (this.isPossessedAndClient()) {
+         this._updatePossessionInputs();
+      }
+   }
 
-    public enum PostFXType {
-        SCOPE(1),
-        PERISCOPE(2),
-        THERMALS_GREEN(3),
-        CAMERA(4),
-        THERMALS_WHITE(5),
-        VISIBLE(6),
-        NONE(0);
+   public boolean isFixedByPlayer() {
+      return true;
+   }
 
-        public final int id;
-        private static final PostFXType[] BY_ID;
+   public boolean isControlledByLocalInstance() {
+      return super.isControlledByLocalInstance() || this.isFixedByPlayer() && this.isPossessedAndClient();
+   }
 
-        static {
-            BY_ID = Arrays.stream(values())
-                    .sorted(Comparator.comparingInt(o -> o.id))
-                    .toArray(PostFXType[]::new);
-        }
+   public boolean isPossessed() {
+      return this.level().isClientSide ? CameraClientHandler.isPossessed(this) : this.currentlyViewing.get() != null;
+   }
 
-        PostFXType(int id) {
-            this.id = id;
-        }
+   public boolean isPossessedAndClient() {
+      return this.level().isClientSide && this.isPossessed();
+   }
 
-        public static PostFXType get(int id) {
-            if (0 < id && id < BY_ID.length)
-                return BY_ID[id];
-            return NONE;
-        }
-    }
+   @OnlyIn(Dist.CLIENT)
+   private void _updatePossessionInputs() {
+   }
 
-    @Nonnull
-    public PostFXType getOverlayType() {
-        return PostFXType.NONE;
-    }
+   public void setDeltaMovement(@Nonnull Vec3 v) {
+   }
 
-    public int getFOV() {
-        return this.fov;
-    }
+   protected void defineSynchedData() {
+   }
 
-    public AngleLimits getRotationLimit() {
-        return this.angleLimit;
-    }
+   protected Vec2 getRotationFromDirection(Vec3 dir) {
+      Vector3d relPos = VectorConversionsMCKt.toJOML(dir);
+      if (VSGameUtilsKt.getShipMountedTo(this) != null) {
+         double length = relPos.length();
+         Ship s = VSGameUtilsKt.getShipMountedTo(this);
+         if (s instanceof ClientShip cs) {
+            relPos = cs.getRenderTransform().getWorldToShip().transformDirection(relPos.normalize());
+         } else {
+            relPos = s.getWorldToShip().transformDirection(relPos.normalize());
+         }
 
-    public float getBaseYaw() {
-        return this.baseYaw;
-    }
+         relPos.mul(length);
+      }
 
-    public void updatePossessionInputs() {
-        if (isPossessedAndClient())
-          updatePossessionInputsClient();
-    }
+      double d0 = relPos.x;
+      double d1 = relPos.y;
+      double d2 = relPos.z;
+      double d3 = Math.sqrt(d0 * d0 + d2 * d2);
+      float x = Mth.wrapDegrees((float)(-(Mth.atan2(d1, d3) * 180.0F / (float)Math.PI)));
+      float y = Mth.wrapDegrees((float)(Mth.atan2(d2, d0) * 180.0F / (float)Math.PI) - 90.0F);
+      return new Vec2(x, y);
+   }
 
-    public boolean isFixedByPlayer() {
-        return true;
-    }
+   protected Vec2 getLimitedRotationFromDirection(Vec3 dir) {
+      Vec2 rawRotation = this.getRotationFromDirection(dir);
+      AngleLimits limit = this.getRotationLimit();
+      float x = rawRotation.x;
+      float y = rawRotation.y;
+      x = Mth.clamp(x, -limit.upperX(), limit.lowerX());
+      if (limit.Y() < 180.0F) {
+         y = Mth.rotateIfNecessary(y, this.getBaseYaw(), limit.Y());
+      }
 
-    @Override
-    public boolean isControlledByLocalInstance() {
-        return (super.isControlledByLocalInstance() || (isFixedByPlayer() && isPossessedAndClient()));
-    }
+      return !Double.isNaN(x) && !Double.isNaN(y) ? new Vec2(x, y) : new Vec2(0.0F, 0.0F);
+   }
 
-    public boolean isPossessed() {
-        return this.level().isClientSide() ? CameraClientHandler.isPossessed(this) : (this.currentlyViewing.get() != null);
-    }
+   protected Vec2 getLimitedRotationFromTarget(Vec3 target, float partial_tick) {
+      return this.getLimitedRotationFromDirection(target.subtract(this.getEyePosition(partial_tick)));
+   }
 
-    public boolean isPossessedAndClient() {
-        return (this.level().isClientSide() && isPossessed());
-    }
+   protected void readAdditionalSaveData(CompoundTag nbt) {
+      this.ANGLE_LIMIT = new AngleLimits(nbt.getFloat("ANGLE_LIMIT_LOWER_X"), nbt.getFloat("ANGLE_LIMIT_UPPER_X"), nbt.getFloat("ANGLE_LIMIT_Y"));
+      this.BASE_YAW = nbt.getFloat("BASE_YAW");
+      this.FOV = nbt.getInt("FOV");
+   }
 
-    @OnlyIn(Dist.CLIENT)
-    private void updatePossessionInputsClient() {}
+   protected void addAdditionalSaveData(CompoundTag nbt) {
+      nbt.putInt("OPTIC_TYPE", this.getOverlayType().id);
+      AngleLimits r = this.getRotationLimit();
+      nbt.putFloat("ANGLE_LIMIT_LOWER_X", r.lowerX());
+      nbt.putFloat("ANGLE_LIMIT_UPPER_X", r.upperX());
+      nbt.putFloat("ANGLE_LIMIT_Y", r.Y());
+      nbt.putFloat("BASE_YAW", this.getBaseYaw());
+      nbt.putInt("FOV", this.getFOV());
+   }
 
-    @Override
-    public void setDeltaMovement(@Nonnull Vec3 motion) {}
+   @Nonnull
+   public Packet<ClientGamePacketListener> getAddEntityPacket() {
+      return NetworkHooks.getEntitySpawningPacket(this);
+   }
 
-    @Override
-    protected void defineSynchedData() {}
+   public void writeSpawnData(FriendlyByteBuf buffer) {
+      CompoundTag nbt = new CompoundTag();
+      this.addAdditionalSaveData(nbt);
+      buffer.writeNbt(nbt);
+   }
 
-    protected Vec2 getRotationFromDirection(Vec3 direction) {
-        Vector3d relPos = VectorConversionsMCKt.toJOML(direction);
-        if (VSGameUtilsKt.getShipMountedTo(this) != null) {
-            double length = relPos.length();
-            LoadedShip loadedShip = VSGameUtilsKt.getShipMountedTo(this);
-            if (loadedShip instanceof ClientShip) {
-                ClientShip cs = (ClientShip) loadedShip;
-                relPos = cs.getRenderTransform().getWorldToShip().transformDirection(relPos.normalize());
-            } else {
-                relPos = loadedShip.getWorldToShip().transformDirection(relPos.normalize());
-            }
-            relPos.mul(length);
-        }
+   public void readSpawnData(FriendlyByteBuf additionalData) {
+      CompoundTag nbt = additionalData.readNbt();
+      if (nbt != null) {
+         this.readAdditionalSaveData(nbt);
+      }
+   }
 
-        double x = relPos.x;
-        double y = relPos.y;
-        double z = relPos.z;
-        double horizontalDistance = Math.sqrt(x * x + z * z);
+   public enum PostFXType {
+      SCOPE(1),
+      PERISCOPE(2),
+      THERMALS_GREEN(3),
+      CAMERA(4),
+      THERMALS_WHITE(5),
+      VISIBLE(6),
+      NONE(0);
 
-        float pitch = Mth.wrapDegrees((float) -(Mth.atan2(y, horizontalDistance) * 57.2957763671875D));
-        float yaw = Mth.wrapDegrees((float) (Mth.atan2(z, x) * 57.2957763671875D) - 90.0F);
+      public final int id;
+      private static final CameraEntity2.PostFXType[] BY_ID = Arrays.stream(values())
+         .sorted(Comparator.comparingInt(o -> o.id))
+         .toArray(CameraEntity2.PostFXType[]::new);
 
-        return new Vec2(pitch, yaw);
-    }
+      PostFXType(int i) {
+         this.id = i;
+      }
 
-    protected Vec2 getLimitedRotationFromDirection(Vec3 direction) {
-        Vec2 rawRotation = getRotationFromDirection(direction);
-        AngleLimits limit = getRotationLimit();
-        float pitch = rawRotation.x;
-        float yaw = rawRotation.y;
-
-        pitch = Mth.clamp(pitch, -limit.upperX(), limit.lowerX());
-
-        if (limit.Y() < 180.0F) {
-            yaw = Mth.rotateIfNecessary(yaw, getBaseYaw(), limit.Y());
-        }
-
-        if (Double.isNaN(pitch) || Double.isNaN(yaw))
-            return new Vec2(0.0F, 0.0F);
-
-        return new Vec2(pitch, yaw);
-    }
-
-    protected Vec2 getLimitedRotationFromTarget(Vec3 target, float partialTick) {
-        return getLimitedRotationFromDirection(target.subtract(this.getEyePosition(partialTick)));
-    }
-
-    @Override
-    protected void readAdditionalSaveData(CompoundTag nbt) {
-        this.angleLimit = new AngleLimits(
-                nbt.getFloat("ANGLE_LIMIT_LOWER_X"),
-                nbt.getFloat("ANGLE_LIMIT_UPPER_X"),
-                nbt.getFloat("ANGLE_LIMIT_Y")
-        );
-        this.baseYaw = nbt.getFloat("BASE_YAW");
-        this.fov = nbt.getInt("FOV");
-    }
-
-    @Override
-    protected void addAdditionalSaveData(CompoundTag nbt) {
-        nbt.putInt("OPTIC_TYPE", getOverlayType().id);
-        AngleLimits limit = getRotationLimit();
-        nbt.putFloat("ANGLE_LIMIT_LOWER_X", limit.lowerX());
-        nbt.putFloat("ANGLE_LIMIT_UPPER_X", limit.upperX());
-        nbt.putFloat("ANGLE_LIMIT_Y", limit.Y());
-        nbt.putFloat("BASE_YAW", getBaseYaw());
-        nbt.putInt("FOV", getFOV());
-    }
-
-    @Nonnull
-    @Override
-    public Packet<ClientGamePacketListener> getAddEntityPacket() {
-        return NetworkHooks.getEntitySpawningPacket(this);
-    }
-
-    @Override
-    public void writeSpawnData(FriendlyByteBuf buffer) {
-        CompoundTag nbt = new CompoundTag();
-        addAdditionalSaveData(nbt);
-        buffer.writeNbt(nbt);
-    }
-
-    @Override
-    public void readSpawnData(FriendlyByteBuf additionalData) {
-        CompoundTag nbt = additionalData.readNbt();
-        if (nbt != null)
-            readAdditionalSaveData(nbt);
-    }
+      public static CameraEntity2.PostFXType get(int i) {
+         return 0 < i && i < BY_ID.length ? BY_ID[i] : NONE;
+      }
+   }
 }
-

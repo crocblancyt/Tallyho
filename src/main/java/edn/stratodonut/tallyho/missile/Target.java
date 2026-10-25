@@ -9,108 +9,96 @@ import org.valkyrienskies.core.api.ships.Ship;
 import org.valkyrienskies.mod.common.util.VectorConversionsMCKt;
 
 public abstract class Target<T> {
-    static final AABB DEFAULT_AABB = AABB.unitCubeFromLowerCorner(Vec3.ZERO);
+   static final AABB DEFAULT_AABB = AABB.unitCubeFromLowerCorner(Vec3.ZERO);
 
-    public abstract Vec3 position();
+   public abstract Vec3 position();
 
-    public abstract Vec3 velocity();
+   public abstract Vec3 velocity();
 
-    public abstract AABB boundingBox();
+   public abstract AABB boundingBox();
 
-    public abstract boolean isAlive();
+   public abstract boolean isAlive();
 
-    @Nullable
-    public abstract T get();
+   @Nullable
+   public abstract T get();
 
-    public static class ShipTarget extends Target<Ship> {
-        WeakReference<Ship> s;
-        long id;
+   public static class EntityTarget extends Target<Entity> {
+      WeakReference<Entity> e;
+      int id;
 
-        public ShipTarget(Ship s) {
-            this.s = new WeakReference<>(s);
-            this.id = s.getId();
-        }
+      public EntityTarget(Entity e) {
+         this.e = new WeakReference<>(e);
+         this.id = e.getId();
+      }
 
-        public Vec3 position() {
-            if (!isAlive())
-                return Vec3.ZERO;
-            return VectorConversionsMCKt.toMinecraft(this.s.get().getTransform().getPositionInWorld());
-        }
+      @Override
+      public Vec3 position() {
+         return !this.isAlive() ? Vec3.ZERO : this.e.get().position();
+      }
 
-        public Vec3 velocity() {
-            if (!isAlive())
-                return Vec3.ZERO;
-            return VectorConversionsMCKt.toMinecraft(this.s.get().getVelocity());
-        }
+      @Override
+      public Vec3 velocity() {
+         return !this.isAlive() ? Vec3.ZERO : this.e.get().getDeltaMovement().scale(20.0);
+      }
 
-        public AABB boundingBox() {
-            if (!isAlive())
-                return DEFAULT_AABB;
-            return VectorConversionsMCKt.toMinecraft(this.s.get().getWorldAABB());
-        }
+      @Override
+      public AABB boundingBox() {
+         return !this.isAlive() ? DEFAULT_AABB : this.e.get().getBoundingBox();
+      }
 
-        @Nullable
-        public Ship get() {
-            return this.s.get();
-        }
+      @Nullable
+      public Entity get() {
+         return this.e.get();
+      }
 
-        public boolean isAlive() {
-            return (this.s.get() != null);
-        }
+      @Override
+      public boolean isAlive() {
+         return this.e.get() != null;
+      }
 
-        public boolean equals(Object obj) {
-            if (obj == this) return true;
-            if (obj instanceof ShipTarget) {
-                ShipTarget st = (ShipTarget)obj;
-                return st.id == this.id;
-            }
-            return false;
-        }
-    }
+      @Override
+      public boolean equals(Object obj) {
+         return obj == this || obj instanceof Target.EntityTarget et && et.id == this.id;
+      }
+   }
 
-    public static class EntityTarget extends Target<Entity> {
-        WeakReference<Entity> e;
-        int id;
+   public static class ShipTarget extends Target<Ship> {
+      WeakReference<Ship> s;
+      long id;
 
-        public EntityTarget(Entity e) {
-            this.e = new WeakReference<>(e);
-            this.id = e.getId();
-        }
+      public ShipTarget(Ship s) {
+         this.s = new WeakReference<>(s);
+         this.id = s.getId();
+      }
 
-        public Vec3 position() {
-            if (!isAlive())
-                return Vec3.ZERO;
-            return this.e.get().position();
-        }
+      @Override
+      public Vec3 position() {
+         return !this.isAlive() ? Vec3.ZERO : VectorConversionsMCKt.toMinecraft(this.s.get().getTransform().getPositionInWorld());
+      }
 
-        public Vec3 velocity() {
-            if (!isAlive())
-                return Vec3.ZERO;
-            return this.e.get().getDeltaMovement().scale(20.0D);
-        }
+      @Override
+      public Vec3 velocity() {
+         return !this.isAlive() ? Vec3.ZERO : VectorConversionsMCKt.toMinecraft(this.s.get().getVelocity());
+      }
 
-        public AABB boundingBox() {
-            if (!isAlive())
-                return DEFAULT_AABB;
-            return this.e.get().getBoundingBox();
-        }
+      @Override
+      public AABB boundingBox() {
+         return !this.isAlive() ? DEFAULT_AABB : VectorConversionsMCKt.toMinecraft(this.s.get().getWorldAABB());
+      }
 
-        @Nullable
-        public Entity get() {
-            return this.e.get();
-        }
+      @Nullable
+      public Ship get() {
+         return this.s.get();
+      }
 
-        public boolean isAlive() {
-            return (this.e.get() != null);
-        }
+      @Override
+      public boolean isAlive() {
+         return this.s.get() != null;
+      }
 
-        public boolean equals(Object obj) {
-            if (obj == this) return true;
-            if (obj instanceof EntityTarget) {
-                EntityTarget et = (EntityTarget)obj;
-                return et.id == this.id;
-            }
-            return false;
-        }
-    }
+      @Override
+      public boolean equals(Object obj) {
+         return obj == this || obj instanceof Target.ShipTarget st && st.id == this.id;
+      }
+   }
 }

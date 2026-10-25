@@ -7,34 +7,34 @@ import edn.stratodonut.tallyho.SpecialModels;
 import edn.stratodonut.tallyho.client.RenderUtil;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderer;
-import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.entity.EntityRendererProvider.Context;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 
 public class RemoteStationRenderer<T extends Entity> extends EntityRenderer<T> {
-    public RemoteStationRenderer(EntityRendererProvider.Context context) {
-        super(context);
-    }
+   public RemoteStationRenderer(Context context) {
+      super(context);
+   }
 
-    public ResourceLocation getTextureLocation(Entity entity) {
-        return null;
-    }
+   public ResourceLocation getTextureLocation(Entity entity) {
+      return null;
+   }
 
-    public void render(Entity entity, float entityYaw, float partialTicks, PoseStack poseStack, MultiBufferSource renderTypeBuffer, int light) {
-        if (entity.tickCount > 1) {
-            poseStack.pushPose();
-            ItemStack m = AllItems.HULL_MG_ITEM.asStack();
-            poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
-            poseStack.mulPose(Axis.YP.rotationDegrees(-entity.getYRot()));
-            poseStack.translate(0.0D, 0.5D, 0.0D);
-            RenderUtil.renderModel(SpecialModels.CROWS_TURRET.getModel(), m, poseStack, renderTypeBuffer, light, OverlayTexture.NO_OVERLAY);
-            poseStack.translate(0.0F, 0.1875F, 0.0F);
-            poseStack.mulPose(Axis.XP.rotationDegrees(-entity.getXRot()));
-            poseStack.translate(0.0F, -0.1875F, 0.0F);
-            RenderUtil.renderModel(SpecialModels.CROWS_GUN.getModel(), m, poseStack, renderTypeBuffer, light, OverlayTexture.NO_OVERLAY);
-            poseStack.popPose();
-        }
-    }
+   public void render(Entity entity, float entityYaw, float partialTicks, PoseStack poseStack, MultiBufferSource renderTypeBuffer, int light) {
+      if (entity.tickCount > 1) {
+         poseStack.pushPose();
+         ItemStack m = AllItems.HULL_MG_ITEM.asStack();
+         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
+         poseStack.mulPose(Axis.YP.rotationDegrees(-entity.getYRot()));
+         poseStack.translate(0.0, 0.5, 0.0);
+         RenderUtil.renderModel(SpecialModels.CROWS_TURRET.getModel(), m, poseStack, renderTypeBuffer, light, OverlayTexture.NO_OVERLAY);
+         poseStack.translate(0.0F, 0.1875F, 0.0F);
+         poseStack.mulPose(Axis.XP.rotationDegrees(-entity.getXRot()));
+         poseStack.translate(0.0F, -0.1875F, 0.0F);
+         RenderUtil.renderModel(SpecialModels.CROWS_GUN.getModel(), m, poseStack, renderTypeBuffer, light, OverlayTexture.NO_OVERLAY);
+         poseStack.popPose();
+      }
+   }
 }

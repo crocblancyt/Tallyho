@@ -13,54 +13,55 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.UseAnim;
+import net.minecraft.world.item.Item.Properties;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class SupportCallerItem extends Item {
-    public SupportCallerItem(Item.Properties properties) {
-        super(properties);
-    }
+   public SupportCallerItem(Properties p_41383_) {
+      super(p_41383_);
+   }
 
-    public int getUseDuration(ItemStack stack) {
-        return 200;
-    }
+   public int getUseDuration(ItemStack p_151222_) {
+      return 200;
+   }
 
-    @NotNull
-    public UseAnim getUseAnimation(@NotNull ItemStack stack) {
-        return UseAnim.SPYGLASS;
-    }
+   @NotNull
+   public UseAnim getUseAnimation(@NotNull ItemStack p_151224_) {
+      return UseAnim.SPYGLASS;
+   }
 
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-        ItemStack itemstack = player.getItemInHand(hand);
-        OffmapSupport strike = OffmapSupport.readFromNBT(itemstack.getTag());
-        if (strike != null) {
-            InteractionResultHolder.pass(itemstack);
-            player.startUsingItem(hand);
-            return InteractionResultHolder.consume(itemstack);
-        }
-        return InteractionResultHolder.fail(itemstack);
-    }
+   public InteractionResultHolder<ItemStack> use(Level p_41432_, Player p_41433_, InteractionHand p_41434_) {
+      ItemStack itemstack = p_41433_.getItemInHand(p_41434_);
+      OffmapSupport strike = OffmapSupport.readFromNBT(itemstack.getOrCreateTag());
+      if (strike != null) {
+         InteractionResultHolder.pass(itemstack);
+         p_41433_.startUsingItem(p_41434_);
+         return InteractionResultHolder.consume(itemstack);
+      } else {
+         return InteractionResultHolder.fail(itemstack);
+      }
+   }
 
-    @NotNull
-    public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity entity) {
-        OffmapSupport strike = OffmapSupport.readFromNBT(stack.getTag());
-        if (strike != null && !level.isClientSide &&
-            strike.strike(entity) && entity instanceof Player) {
-            Player player = (Player)entity;
-            if (!player.isCreative()) {
-                stack.shrink(1);
-                player.getCooldowns().addCooldown(stack.getItem(), 20);
-            }
-        }
-        return stack;
-    }
+   @NotNull
+   public ItemStack finishUsingItem(ItemStack p_41409_, Level p_41410_, LivingEntity p_41411_) {
+      OffmapSupport strike = OffmapSupport.readFromNBT(p_41409_.getOrCreateTag());
+      if (strike != null && !p_41410_.isClientSide && strike.strike(p_41411_) && p_41411_ instanceof Player player && !player.isCreative()) {
+         p_41409_.shrink(1);
+         player.getCooldowns().addCooldown(p_41409_.getItem(), 20);
+      }
 
-    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
-        super.appendHoverText(stack, level, tooltip, flag);
-        OffmapSupport strike = OffmapSupport.readFromNBT(stack.getTag());
-        if (strike != null)
-            strike.appendHoverText(tooltip);
-        tooltip.add(Component.literal("Hold down RMB for 10s").withStyle(Style.EMPTY.withColor(ChatFormatting.GRAY)));
-    }
+      return p_41409_;
+   }
+
+   public void appendHoverText(ItemStack p_41421_, @Nullable Level p_41422_, List<Component> p_41423_, TooltipFlag p_41424_) {
+      super.appendHoverText(p_41421_, p_41422_, p_41423_, p_41424_);
+      OffmapSupport strike = OffmapSupport.readFromNBT(p_41421_.getOrCreateTag());
+      if (strike != null) {
+         strike.appendHoverText(p_41423_);
+      }
+
+      p_41423_.add(Component.literal("Hold down RMB for 10s").withStyle(Style.EMPTY.withColor(ChatFormatting.GRAY)));
+   }
 }

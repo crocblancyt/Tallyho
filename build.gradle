@@ -265,8 +265,6 @@ dependencies {
     implementation fg.deobf("blank:Xaeros_Minimap_24.7.1_Forge_1.20:24.7.1")
     implementation fg.deobf("blank:SimpleRadio-forge-1.20.1-2.4.6.1:2.4.6.1")
     implementation fg.deobf("blank:voicechat-forge-1.20.1-2.5.26:2.5.26")
-
-
 }
 
 

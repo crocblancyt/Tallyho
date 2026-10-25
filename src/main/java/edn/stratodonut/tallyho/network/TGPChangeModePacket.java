@@ -5,46 +5,43 @@ import edn.stratodonut.tallyho.camera.entity.TargetingPodEntity;
 import javax.annotation.Nonnull;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.network.NetworkEvent;
+import net.minecraftforge.network.NetworkEvent.Context;
 
 public class TGPChangeModePacket extends SimplePacketBase {
-    public int id;
-    public int mode;
-    public Vec3 stab;
+   public int id;
+   public int mode;
+   public Vec3 stab;
 
-    public TGPChangeModePacket() {}
+   public TGPChangeModePacket() {
+   }
 
-    public TGPChangeModePacket(TargetingPodEntity tgp, TargetingPodEntity.TGP_MODE mode, @Nonnull Vec3 stab) {
-        this.id = tgp.getId();
-        this.mode = mode.id();
-        this.stab = stab;
-    }
+   public TGPChangeModePacket(TargetingPodEntity tgp, TargetingPodEntity.TGP_MODE mode, @Nonnull Vec3 stab) {
+      this.id = tgp.getId();
+      this.mode = mode.id();
+      this.stab = stab;
+   }
 
-    public TGPChangeModePacket(FriendlyByteBuf buf) {
-        this.id = buf.readInt();
-        this.mode = buf.readInt();
-        this.stab = new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble());
-    }
+   public TGPChangeModePacket(FriendlyByteBuf buf) {
+      this.id = buf.readVarInt();
+      this.mode = buf.readInt();
+      this.stab = new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble());
+   }
 
-    public void write(FriendlyByteBuf buf) {
-        buf.writeInt(this.id);
-        buf.writeInt(this.mode);
-        buf.writeDouble(this.stab.x);
-        buf.writeDouble(this.stab.y);
-        buf.writeDouble(this.stab.z);
-    }
+   public void write(FriendlyByteBuf buf) {
+      buf.writeVarInt(this.id);
+      buf.writeInt(this.mode);
+      buf.writeDouble(this.stab.x);
+      buf.writeDouble(this.stab.y);
+      buf.writeDouble(this.stab.z);
+   }
 
-    public boolean handle(NetworkEvent.Context context) {
-        ServerPlayer serverPlayer = context.getSender();
-        if (serverPlayer != null) {
-            Entity e = serverPlayer.level().getEntity(this.id);
-            if (e instanceof TargetingPodEntity) {
-                TargetingPodEntity tgp = (TargetingPodEntity)e;
-                tgp.handle(this);
-            }
-        }
-        return true;
-    }
+   public boolean handle(Context context) {
+      ServerPlayer serverPlayer = context.getSender();
+      if (serverPlayer != null && serverPlayer.level().getEntity(this.id) instanceof TargetingPodEntity tgp) {
+         tgp.handle(this);
+      }
+
+      return true;
+   }
 }
